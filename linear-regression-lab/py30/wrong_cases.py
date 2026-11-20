@@ -189,4 +189,28 @@ WRONG = {
         ('độ lệch chuẩn ddof=0 và khoảng tin cậy theo 1,96', 'def seed_everything(s): random.seed(s); np.random.seed(s); torch.manual_seed(s)\ndef run_seeds(f,seeds):\n    o=[]\n    for s in seeds: seed_everything(s); o.append(f())\n    return np.array(o)\ndef summarize(x):\n    x=np.asarray(x,float); n=len(x); m,sd=x.mean(),x.std(); h=1.96*sd/math.sqrt(n)\n    return {"mean":float(m),"std":float(sd),"ci_low":float(m-h),"ci_high":float(m+h)}\ndef paired_compare(a,b): return summarize(np.asarray(a)-np.asarray(b))'),
         ('so hai trung bình độc lập thay vì hiệu cặp', 'def seed_everything(s): random.seed(s); np.random.seed(s); torch.manual_seed(s)\ndef run_seeds(f,seeds):\n    o=[]\n    for s in seeds: seed_everything(s); o.append(f())\n    return np.array(o)\ndef summarize(x):\n    x=np.asarray(x,float); n=len(x); m,sd=x.mean(),x.std(ddof=1); h=stats.t.ppf(.975,n-1)*sd/math.sqrt(n)\n    return {"mean":float(m),"std":float(sd),"ci_low":float(m-h),"ci_high":float(m+h)}\ndef paired_compare(a,b):\n    a,b=np.asarray(a),np.asarray(b); d=a.mean()-b.mean(); s=math.sqrt(a.var(ddof=1)/len(a)+b.var(ddof=1)/len(b))\n    return {"mean":float(d),"std":s,"ci_low":d-2*s,"ci_high":d+2*s}'),
     ],
+    # ───── Tuần 5 ─────
+    'd29-holdout': [
+        ('lấy 20% cuối, không xáo trộn', 'def lock_holdout(n,frac,seed):\n    k=int(round(frac*n)); return np.arange(n-k), np.arange(n-k,n)\ndef fingerprint(idx): return hashlib.sha256(np.asarray(sorted(idx),dtype=np.int64).tobytes()).hexdigest()[:16]'),
+        ('dấu vân tay phụ thuộc thứ tự', 'def lock_holdout(n,frac,seed):\n    o=np.random.default_rng(seed).permutation(n); k=int(round(frac*n)); return np.sort(o[k:]),np.sort(o[:k])\ndef fingerprint(idx): return hashlib.sha256(np.asarray(list(idx),dtype=np.int64).tobytes()).hexdigest()[:16]'),
+        ('holdout không sắp xếp và cỡ làm tròn xuống', 'def lock_holdout(n,frac,seed):\n    o=np.random.default_rng(seed).permutation(n); k=int(frac*n); return o[k:],o[:k]\ndef fingerprint(idx): return hashlib.sha256(np.asarray(sorted(idx),dtype=np.int64).tobytes()).hexdigest()[:16]'),
+    ],
+    'd29-baseline': [
+        ('rmsle không lấy log, cv dùng chung một mô hình fit trên toàn bộ', 'def rmse(y,p): return float(np.sqrt(np.mean((np.asarray(p)-np.asarray(y))**2)))\ndef rmsle(y,p): return rmse(y,p)\ndef cv_rmse(make,X,y,seed):\n    m=make().fit(X,y); return rmse(y,m.predict(X))'),
+        ('KFold không xáo trộn', 'def rmse(y,p): return float(np.sqrt(np.mean((np.asarray(p)-np.asarray(y))**2)))\ndef rmsle(y,p):\n    p=np.clip(np.asarray(p,float),0,None); return float(np.sqrt(np.mean((np.log1p(p)-np.log1p(np.asarray(y,float)))**2)))\ndef cv_rmse(make,X,y,seed):\n    s=[]\n    for tr,va in KFold(5).split(X): s.append(rmse(y[va],make().fit(X.iloc[tr],y[tr]).predict(X.iloc[va])))\n    return float(np.mean(s))'),
+        ('rmsle quên chặn dự đoán âm', 'def rmse(y,p): return float(np.sqrt(np.mean((np.asarray(p)-np.asarray(y))**2)))\ndef rmsle(y,p): return float(np.sqrt(np.mean((np.log1p(np.asarray(p,float))-np.log1p(np.asarray(y,float)))**2)))\ndef cv_rmse(make,X,y,seed):\n    s=[]\n    for tr,va in KFold(5,shuffle=True,random_state=seed).split(X): s.append(rmse(y[va],make().fit(X.iloc[tr],y[tr]).predict(X.iloc[va])))\n    return float(np.mean(s))'),
+    ],
+    'd30-ablation': [
+        ('delta theo chiều ngược (full − bỏ nhóm)', 'def ablation(make,X,y,groups,seed):\n    f=cv_rmse(make,X,y,seed); r=[{"nhóm":g,"rmse":cv_rmse(make,X.drop(columns=c),y,seed)} for g,c in groups.items()]\n    t=pd.DataFrame(r); t["delta"]=f-t.rmse; return t.sort_values("delta",ascending=False).reset_index(drop=True)'),
+        ('chỉ giữ nhóm thay vì bỏ nhóm, không sắp xếp', 'def ablation(make,X,y,groups,seed):\n    f=cv_rmse(make,X,y,seed); r=[]\n    for g,c in groups.items():\n        s=cv_rmse(make,X[c],y,seed); r.append({"nhóm":g,"rmse":s,"delta":s-f})\n    return pd.DataFrame(r)'),
+    ],
+    'd30-errors': [
+        ('mae thành sai số có dấu, không sắp xếp', 'def error_slices(df,y,p,by,q=None):\n    k=pd.qcut(df[by],q) if q else df[by]; e=np.asarray(p)-np.asarray(y)\n    return pd.DataFrame({"g":k.to_numpy(),"e":e}).groupby("g",observed=True).agg(n=("e","size"),mae=("e","mean"),bias=("e","mean"))\ndef worst_cases(y,p,k): return np.argsort(-np.abs(np.asarray(p)-np.asarray(y)),kind="stable")[:k]'),
+        ('bias ngược dấu, worst_cases lấy sai số nhỏ nhất', 'def error_slices(df,y,p,by,q=None):\n    k=pd.qcut(df[by],q) if q else df[by]; e=np.asarray(y)-np.asarray(p)\n    return pd.DataFrame({"g":k.to_numpy(),"a":np.abs(e),"e":e}).groupby("g",observed=True).agg(n=("a","size"),mae=("a","mean"),bias=("e","mean")).sort_values("mae",ascending=False)\ndef worst_cases(y,p,k): return np.argsort(np.abs(np.asarray(p)-np.asarray(y)),kind="stable")[:k]'),
+    ],
+    'd30-submission': [
+        ('chỉ kiểm tra số dòng', 'def check_submission(sub,ids,id_col="Id",target_col="SalePrice"):\n    return [] if len(sub)==len(ids) else ["sai số dòng"]'),
+        ('quên kiểm tra thứ tự id và giá trị âm', 'def check_submission(sub,ids,id_col="Id",target_col="SalePrice"):\n    p=[]\n    if list(sub.columns)!=[id_col,target_col]: return ["sai cột"]\n    if len(sub)!=len(ids): p.append("sai số dòng")\n    if sub[target_col].isna().any(): p.append("NaN")\n    if not pd.api.types.is_numeric_dtype(sub[target_col]): p.append("không phải số")\n    return p'),
+        ('báo lỗi cả file đúng', 'def check_submission(sub,ids,id_col="Id",target_col="SalePrice"): return ["luôn báo lỗi"]'),
+    ],
 }

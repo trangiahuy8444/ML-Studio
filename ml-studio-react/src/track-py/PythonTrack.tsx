@@ -15,15 +15,14 @@ import week3 from './week3.json';
 import {WeekThreeLab} from './WeekThreeLab';
 import week4 from './week4.json';
 import {WeekFourLab} from './WeekFourLab';
+import week5 from './week5.json';
+import {WeekFiveLab} from './WeekFiveLab';
 import {AlgoAtlas,AlgoCard,cardsForDay} from './AlgoCards';
-const content=[...week1.map(l=>({...l,projectTitle:'House Prices'})),...week2,...week3,...week4];
+const content=[...week1.map(l=>({...l,projectTitle:'House Prices'})),...week2,...week3,...week4,...week5];
 import './python-track.css';
 
 const storageKey='mlStudioPy30-progress-v1';
 const blocks=[['Khởi động',10],['Trực quan hóa',30],['Mô phỏng code',20],['Đọc có chủ đích',20],['Lab từ đầu',50],['Dự án',40],['Tổng kết',10]] as const;
-const roadmap=[
-  ['Dự án tổng kết',['Khóa holdout và baseline','Ablation, phân tích lỗi và submission']],
-] as const;
 type Lesson=(typeof content)[number];
 type DayProgress={blocks:boolean[];journal:string;prediction:string;grades:Record<string,boolean>};
 type Progress={version:1;days:Record<string,DayProgress>};
@@ -159,7 +158,7 @@ function DayPage({lesson,progress,change,onBusy,openDay}:{lesson:Lesson;progress
     {cardsForDay(id).length>0&&<div className="day-hero-cards">{cardsForDay(id).map(c=><AlgoCard key={c.id} spec={c}/>)}</div>}
     <SimulationStudio title="Quan sát từng phép tính" description={lesson.title}>
       <label>Dự đoán trước khi thử<textarea rows={2} value={progress.prediction} onChange={e=>change({prediction:e.target.value.slice(0,1000)})}/></label>
-      {id<=7?<WeekOneLab day={id}/>:id<=14?<WeekTwoLab day={id}/>:id<=21?<WeekThreeLab day={id}/>:<WeekFourLab day={id}/>}
+      {id<=7?<WeekOneLab day={id}/>:id<=14?<WeekTwoLab day={id}/>:id<=21?<WeekThreeLab day={id}/>:id<=28?<WeekFourLab day={id}/>:<WeekFiveLab day={id}/>}
       {id!==4&&id!==5&&<CodeTrace lesson={lesson}/>}
     </SimulationStudio>
     <section className="panel py30-section"><h2>Đọc có chủ đích</h2><ul>{lesson.reads.map(r=><li key={r}>{r}</li>)}</ul></section>
@@ -205,10 +204,9 @@ export function PythonTrack({day,openDay,onBusy}:{day?:number;openDay:(day?:numb
   if(day)return <section className="panel py30-section"><h1>Ngày {day} · Đang trong lộ trình</h1><p>Buổi này sẽ mở sau khi nội dung tuần trước được duyệt.</p><button className="btn-primary" onClick={()=>openDay()}>Quay lại lộ trình</button></section>;
   return <><header className="page-heading"><h1>Python → ML 30 ngày</h1><p>Dành cho bạn đã vững Python và mới học Machine Learning. Mỗi buổi 180 phút, từ mô phỏng đến tự cài thuật toán và thử trên dự án.</p></header>
     <AlgoAtlas openDay={d=>openDay(d)} available={d=>d<=content.length}/>
-    {[['Tuần 1 · Hồi quy và tối ưu · Dự án House Prices',1,7],['Tuần 2 · Phân loại và đánh giá · Dự án Titanic',8,14],['Tuần 3 · Cây, tổ hợp và học không nhãn · Dự án Digit Recognizer',15,21],['Tuần 4 · Mạng nơ-ron và PyTorch · Dự án CNN nhiều seed',22,28]].map(([title,from,to])=><section className="panel py30-section" key={title as string}><h2>{title}</h2>
+    {[['Tuần 1 · Hồi quy và tối ưu · Dự án House Prices',1,7],['Tuần 2 · Phân loại và đánh giá · Dự án Titanic',8,14],['Tuần 3 · Cây, tổ hợp và học không nhãn · Dự án Digit Recognizer',15,21],['Tuần 4 · Mạng nơ-ron và PyTorch · Dự án CNN nhiều seed',22,28],['Tuần 5 · Dự án tổng kết trên Kaggle',29,30]].map(([title,from,to])=><section className="panel py30-section" key={title as string}><h2>{title}</h2>
       <div className="py30-days">{content.filter(d=>d.id>=(from as number)&&d.id<=(to as number)).map(d=><button key={d.id} className="btn-outline" onClick={()=>openDay(d.id)}>Ngày {d.id} · {d.title} ({progress.days[d.id]?.blocks.filter(Boolean).length??0}/7)</button>)}</div>
     </section>)}
-    {roadmap.map(([title,topics],i)=><details className="panel py30-section" key={title}><summary>Tuần {i+5} · {title} · Chờ triển khai</summary><ol start={29+7*i}>{topics.map(t=><li key={t}>{t}</li>)}</ol></details>)}
     <div className="py30-actions"><button className="btn-outline" onClick={()=>download('Tien_do_Python_ML_30_ngay.json',JSON.stringify(progress,null,2))}>Xuất tiến độ Python → ML</button>
       <label>Nhập tiến độ Python → ML <input type="file" accept="application/json,.json" onChange={async e=>{
         const file=e.currentTarget.files?.[0];e.currentTarget.value='';

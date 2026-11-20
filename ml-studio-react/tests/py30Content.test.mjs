@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const load=f=>JSON.parse(readFileSync(new URL('../src/track-py/'+f,import.meta.url),'utf8'));
-const lessons=[...load('week1.json'),...load('week2.json'),...load('week3.json'),...load('week4.json')];
+const lessons=[...load('week1.json'),...load('week2.json'),...load('week3.json'),...load('week4.json'),...load('week5.json')];
 test('lộ trình liên tục từ ngày 1 và mỗi ngày có đủ phần',()=>{
   lessons.forEach((l,i)=>{
     assert.equal(l.id,i+1);
@@ -42,3 +42,4 @@ test('tuần 4: bài dùng PyTorch báo rõ khi thiếu thư viện, Ngày 22–
     else assert.match(l.setup,/requirements-py30\.txt/);
   }
 });
+test('lộ trình đủ 30 ngày',()=>{assert.equal(lessons.length,30);assert.equal(lessons.at(-1).id,30);});
