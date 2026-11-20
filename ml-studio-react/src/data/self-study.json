@@ -1,0 +1,728 @@
+{
+  "intro": "Cẩm nang này được viết để em tự học tiếp mà không cần chờ một cuộc trò chuyện mới. Đích 30 ngày là hoàn thành một vòng dự án AI có thể giải thích và chạy lại: từ câu hỏi, dữ liệu, mô hình đến đánh giá và giới hạn. Các chủ đề rộng như CNN, Transformer và reinforcement learning được giới thiệu ở mức nền tảng; không coi 30 ngày là học xong toàn bộ AI.",
+  "routine": [
+    "10 phút: nhớ lại bài trước mà chưa mở đáp án; nói thành lời một ý chính.",
+    "15 phút: mở mô phỏng, dự đoán rồi tiến từng bước; ghi một điều khác dự đoán.",
+    "20 phút: đọc phần giải thích đúng chỗ đang vướng, tính tay một ví dụ nhỏ.",
+    "60 phút: làm A/B, sửa code, chạy kiểm tra; C chỉ khi còn thời gian.",
+    "15 phút: viết nhật ký gồm em đổi gì, quan sát gì, vì sao và điều chưa chắc. Sau ngày 7/16/21 làm bài mốc trong cùng buổi hoặc dùng phần giờ thứ ba."
+  ],
+  "rescue": [
+    "Nếu không hiểu: giảm về một mẫu, một đặc trưng hoặc một phép toán.",
+    "Nếu chưa làm được B: tính tay ví dụ số nhỏ, đọc gợi ý; chỉ xem lời giải sau một lần thử thật.",
+    "Sau khi xem lời giải: đóng lại, viết lại từ đầu, đổi số và giải thích vì sao vẫn đúng.",
+    "Nếu học chậm hơn lịch: kéo dài một ngày thành hai buổi; ưu tiên hoàn tất A/B, giữ C tùy chọn. Không đánh dấu hoàn thành chỉ để theo kịp lịch."
+  ],
+  "project": [
+    "Viết câu hỏi: dự đoán giá nào, ở thời điểm nào, bằng thông tin nào? Chốt đơn vị và người sử dụng trước khi chọn model.",
+    "Phân biệt hai dữ liệu trên web: ví dụ diện tích–giá là tổng hợp; bộ UCI Real Estate có 414 giao dịch, cột tuổi nhà, khoảng cách MRT, số cửa hàng, tọa độ và giá trên đơn vị diện tích. Cột đích price_10k_ntd_per_ping có đơn vị 10.000 TWD/ping, không phải tỷ VND hay tổng giá căn nhà.",
+    "Đọc schema và kiểm tra missing, miền giá trị, trùng lặp. Không dùng id như bằng chứng giá trị thị trường. Trong thí nghiệm web, các đặc trưng tuổi nhà/khoảng cách MRT/cửa hàng được dùng để minh họa.",
+    "Chia train/validation/test; fit scaler và model chỉ trên train. Dự đoán hằng từ train làm baseline. So MAE của model và baseline trên cùng validation; chưa nhìn test để chọn cấu hình.",
+    "Vẽ giá thật–dự đoán, residual và các lỗi lớn. Tự giải thích một dòng: đầu vào → chuẩn hóa → đóng góp hệ số → dự đoán → sai số.",
+    "Đóng băng lựa chọn rồi đánh giá test. Bộ dữ liệu này thuộc bối cảnh khác Việt Nam; random split trên cùng tập chưa chứng minh dùng được để định giá bất động sản tại nơi em sống. Báo cáo giới hạn và điều kiện cần thu thập dữ liệu mới."
+  ],
+  "foundations": [
+    {
+      "title": "Từ dữ liệu đến mô hình",
+      "text": "Dữ liệu là các quan sát; đặc trưng X là đầu vào; mục tiêu y là đầu ra mong muốn. Mô hình là hàm có tham số θ. Huấn luyện dùng dữ liệu train để chọn θ; suy luận áp dụng θ đã học vào đầu vào mới. Mô hình có thể trả lời sai dù code chạy đúng.",
+      "formula": "Dự đoán: ŷ=fθ(X). Học: tìm θ làm loss train nhỏ, rồi kiểm tra khả năng dùng ngoài train."
+    },
+    {
+      "title": "Ba vai trò của dữ liệu",
+      "text": "Train để fit tham số và tiền xử lý. Validation để chọn cấu hình. Test cho đánh giá cuối sau lựa chọn. Mọi dữ liệu có thể vô tình mang thông tin tương lai, nhóm trùng hoặc nhãn vào X; hãy kiểm tra trước khi chia và fit.",
+      "formula": "fit scaler(train) → transform(train/validation/test) bằng cùng scaler."
+    },
+    {
+      "title": "Loss, metric, baseline",
+      "text": "Loss phục vụ tối ưu; metric phục vụ đánh giá mục tiêu sử dụng. Hai thứ có thể khác nhau. Baseline là cách đơn giản cần vượt qua, chẳng hạn dự đoán mean/median train hoặc lớp đa số. Báo cáo con số phải có tập đo, đơn vị và baseline.",
+      "formula": "MSE=mean((ŷ−y)²); MAE=mean(|ŷ−y|); BCE=−mean(y ln p+(1−y)ln(1−p))."
+    },
+    {
+      "title": "Tham số và siêu tham số",
+      "text": "w,b là tham số học được. Learning rate, k của KNN, max depth, số nút ẩn là siêu tham số do người thiết kế chọn theo thí nghiệm phù hợp. Seed giúp tái lập ngẫu nhiên; cùng seed không làm model đúng về mặt khoa học.",
+      "formula": "θ mới = θ cũ − α∇L(θ cũ). Tính mọi gradient ở cùng θ cũ."
+    },
+    {
+      "title": "Chuẩn hóa và đơn vị",
+      "text": "Khoảng cách và bước tối ưu bị ảnh hưởng bởi thang đo. Standardization dùng mean/SD train. Một số cây không cần chuẩn hóa như KNN/hồi quy gradient, nhưng vẫn cần xử lý schema và missing đúng. Cột hằng có SD=0 cần quy ước tránh chia 0.",
+      "formula": "z=(x−μtrain)/σtrain. Không fit lại μ/σ trên từng mẫu mới."
+    },
+    {
+      "title": "Generalization và overfitting",
+      "text": "Giảm lỗi train là cần cho học, nhưng chưa đủ để dùng tốt ngoài train. Train tốt, validation kém gợi ý cần xem độ phức tạp, dữ liệu, rò rỉ, lệch phân phối và cách chia. Không có một nút chữa tất cả.",
+      "formula": "Hãy đặt cạnh nhau: train metric, validation metric, baseline và số mẫu."
+    },
+    {
+      "title": "Gradient và kiểm tra số",
+      "text": "Gradient là đạo hàm theo từng tham số. Chain rule nối đạo hàm qua các lớp. Sai phân trung tâm là cách đối chiếu cục bộ hữu ích, không thay mọi kiểm tra dữ liệu/quy trình. Cần dùng loss cùng định nghĩa trung bình và cùng tham số.",
+      "formula": "g số≈[L(θ+εeⱼ)−L(θ−εeⱼ)]/(2ε); bài dùng ε=10⁻⁵."
+    },
+    {
+      "title": "Đọc code NumPy",
+      "text": "Đọc shape trước giá trị: X(n,d), w(d,), y(n,). @ là nhân ma trận/tích vô hướng, * thường nhân từng phần tử. axis=0 thường giảm qua các hàng, axis=1 qua các cột trong ma trận 2D. Kiểm tra broadcasting khi cộng bias hoặc nhân delta.",
+      "formula": "X @ w + b → (n,); X.T @ residual → (d,)."
+    },
+    {
+      "title": "Quan sát không phải bằng chứng nhân quả",
+      "text": "Hệ số, attention weight hoặc cụm cho thấy cách hệ thống tính trong điều kiện đang xét; không tự chứng minh vì sao thế giới vận hành. Dữ liệu có thể thiếu yếu tố, thiên lệch hoặc khác bối cảnh sử dụng.",
+      "formula": "Phân biệt: tính toán đúng → đánh giá đúng → phù hợp sử dụng. Ba câu hỏi khác nhau."
+    },
+    {
+      "title": "Cách đọc một hình ML",
+      "text": "Đọc trục, đơn vị, nguồn dữ liệu và tập đo trước đường cong. Hỏi điểm đang là sample, tham số hay score; màu là nhãn thật hay nhãn dự đoán; ảnh là minh họa hay kết quả tính. Đổi một yếu tố và viết dự đoán trước khi chạy.",
+      "formula": "Đoán → chạy một bước → đọc số → giải thích → thử phản ví dụ."
+    }
+  ],
+  "days": [
+    {
+      "id": 1,
+      "title": "AI là gì và em sẽ học điều gì?",
+      "question": "Từ vài căn nhà đã biết giá, máy đoán giá nhà mới như thế nào?",
+      "idea": "Mỗi dòng là một mẫu. X là thông tin có trước lúc dự đoán; y là điều muốn đoán. Học là điều chỉnh tham số để dự đoán từ X gần y trên train. Quy tắc do người viết và tham số học từ dữ liệu là hai cách xây hệ thống khác nhau.",
+      "example": "Nhà 40 m² giá 1,5 tỷ; 80 m² giá 2,7 tỷ. Đường ŷ=0,03x+0,3 dự đoán nhà 60 m² là 2,1 tỷ. Đây là ví dụ tổng hợp.",
+      "experiment": "Mở dự án giá nhà trước. Đổi diện tích, tự đoán rồi xem kết quả. Sau đó phân loại ba nhiệm vụ trong bài B: dự đoán số, dự đoán nhãn, tạo nội dung.",
+      "check": "Em nêu được X, y và thông tin nào chưa có khi cần dự đoán. Bài B: regression, classification, generation.",
+      "pitfall": "Dự đoán giá liên tục dùng linear regression làm khởi đầu; logistic regression dự đoán xác suất phân loại, không xuất giá liên tục.",
+      "practice": {
+        "A": "Chọn 3 ứng dụng và ghi rõ đầu vào, đầu ra, quy tắc hay phần được học từ dữ liệu.",
+        "B": "Gán ba nhiệm vụ dưới đây vào regression, classification hoặc generation.",
+        "C": "Vẽ bản đồ AI và thêm một ví dụ tìm đường không cần học dữ liệu.",
+        "hint": "Nhìn vào kiểu đầu ra, không dựa vào tên ứng dụng.",
+        "solution": "answer = ['regression', 'classification', 'generation']"
+      }
+    },
+    {
+      "id": 2,
+      "title": "Dùng Python để quan sát dữ liệu",
+      "question": "Dữ liệu thiếu hoặc sai có làm máy học sai không?",
+      "idea": "Bảng dữ liệu là hợp đồng đầu vào: kiểu cột, đơn vị, miền giá trị, ý nghĩa mỗi hàng. Thiếu dữ liệu không đồng nghĩa bằng 0. Kiểm tra trước khi vẽ hoặc huấn luyện.",
+      "example": "scores=[50, NaN, 80, 60]. Lọc giá trị hữu hạn và ≥60 thu được [80,60]. Điều kiện phải kết hợp đúng trên từng phần tử.",
+      "experiment": "Thử giữ NaN, thay bằng 0 và lọc bỏ; so trung bình. Với dữ liệu nhà, kiểm tra tuổi nhà âm, khoảng cách âm hoặc giá sai đơn vị.",
+      "check": "Em giải thích được np.isfinite, mask boolean và vì sao phải kiểm tra số mẫu sau khi lọc.",
+      "pitfall": "Không xóa mọi hàng thiếu một cách máy móc; phải ghi số hàng mất và cân nhắc việc lọc có làm lệch nhóm dữ liệu.",
+      "practice": {
+        "A": "Tìm một giá trị thiếu, một giá trị lớn và mô tả bảng trước khi tính trung bình.",
+        "B": "Lọc các điểm hữu hạn và từ 60 trở lên trong scores. Giữ thứ tự xuất hiện.",
+        "C": "Lưu bảng thành CSV rồi đọc lại; giải thích khác biệt giữa bỏ dòng thiếu và điền giá trị.",
+        "hint": "Kết hợp np.isfinite với một điều kiện so sánh bằng toán tử &.",
+        "solution": "answer = scores[np.isfinite(scores) & (scores >= 60)]"
+      }
+    },
+    {
+      "id": 3,
+      "title": "Toán cần dùng: vector và ma trận",
+      "question": "Một dòng dữ liệu biến thành một dự đoán bằng phép toán nào?",
+      "idea": "Mỗi hàng của X là một đối tượng, mỗi cột là một đặc trưng. Nếu X có kích thước n×d, nhân với w dài d sẽ cho n dự đoán. Với đồ thị, X vẫn tổ chức theo kiểu đó, còn ma trận kề A có kích thước n×n vì cả hàng và cột đều chỉ nút.",
+      "example": "x=[80,3], w=[0,03;0,2], b=0,5 cho ŷ=80×0,03+3×0,2+0,5=3,5. Đổi thứ tự cột mà giữ w sẽ đổi ý nghĩa.",
+      "experiment": "Tính tay một hàng rồi chạy X @ w + b. Đọc shape của mọi ma trận, không chỉ nhìn giá trị.",
+      "check": "Em kiểm tra được chiều nhân ma trận và chỉ ra đóng góp của từng đặc trưng.",
+      "pitfall": "Broadcasting có thể chạy mà cho sai ý nghĩa. Ghi shape mong đợi trước khi dùng NumPy.",
+      "practice": {
+        "A": "Ghi shape của X, w và y; tính dự đoán của hàng đầu bằng tay.",
+        "B": "Tính Xw + b cho cả ba hàng, không dùng vòng lặp.",
+        "C": "Viết cách dùng vòng lặp và đối chiếu; làm sai một shape để đọc thông báo lỗi.",
+        "hint": "Nhân ma trận @ rồi cộng một hệ số chặn cho mỗi hàng.",
+        "solution": "answer = X @ w + b"
+      }
+    },
+    {
+      "id": 4,
+      "title": "Dữ liệu có biến động và bất định",
+      "question": "Một con số trung bình có kể hết câu chuyện không?",
+      "idea": "Xác suất mô tả mô hình của phép thử, còn tần suất là số quan sát trong mẫu chia cho số lần thử. Đồng xu công bằng có xác suất mặt ngửa 0,5. Nếu 20 lần tung cho 12 mặt ngửa thì tần suất của mẫu là 0,6. Mean và median trả lời một câu hỏi khác: dữ liệu tập trung quanh đâu, và tâm đó nhạy với ngoại lệ đến mức nào.",
+      "example": "[1,2,3,4,100] có mean=22, median=3. Căn nhà cực đắt kéo mean lên; không có nghĩa căn điển hình giá 22.",
+      "experiment": "Thêm một ngoại lệ vào dữ liệu, xem histogram và mean/median trước–sau. Viết lý do có giữ ngoại lệ hay không.",
+      "check": "Em mô tả được trung tâm, độ phân tán, ngoại lệ và đơn vị.",
+      "pitfall": "Không xóa ngoại lệ chỉ vì mô hình dự đoán kém; kiểm tra đó là lỗi nhập hay trường hợp thật.",
+      "practice": {
+        "A": "Dự đoán mean và median thay đổi thế nào khi thêm giá trị 100.",
+        "B": "Trả về [mean, median] cho values, rồi giải thích đại lượng nào nhạy với ngoại lệ hơn.",
+        "C": "Mô phỏng đồng xu với 5 seed và so tỷ lệ mặt ngửa, không chỉ xem một lần chạy.",
+        "hint": "Mean dùng tổng chia số lượng; median là giá trị giữa sau khi sắp xếp.",
+        "solution": "answer = [np.mean(values), np.median(values)]"
+      }
+    },
+    {
+      "id": 5,
+      "title": "Tại sao mô hình biết phải thay đổi theo hướng nào?",
+      "question": "Máy biết nên thay trọng số theo hướng nào?",
+      "idea": "Loss đo độ sai. Gradient chỉ hướng tăng loss nhanh nhất tại điểm hiện tại; gradient descent đi ngược hướng đó. Learning rate quyết định độ dài bước, không phải trọng số học được.",
+      "example": "L(w)=(w−3)²; dL/dw=2(w−3). w=0, α=0,1 → w mới=0−0,1×(−6)=0,6; loss từ 9 xuống 5,76.",
+      "experiment": "Tính một bước trước khi bấm tiến. Đổi α từ nhỏ sang lớn; quan sát khi nào bước đi vượt qua vùng tốt.",
+      "check": "Em nói được vì sao trừ gradient và phân biệt tham số với siêu tham số.",
+      "pitfall": "Loss không nhất thiết giảm với mọi α; gradient đúng vẫn có thể đi quá xa.",
+      "practice": {
+        "A": "Tính gradient tại w=0 và dự đoán hướng đi trước khi chạy.",
+        "B": "Thực hiện một bước cho L(w)=(w−3)² từ w=0 với alpha=0.1.",
+        "C": "So alpha=0.1 và 1.1 qua 10 bước, giải thích một đường phân kỳ.",
+        "hint": "Đạo hàm là 2(w−3); cập nhật trừ alpha nhân gradient.",
+        "solution": "answer = w - alpha * 2 * (w - 3)"
+      }
+    },
+    {
+      "id": 6,
+      "title": "Hồi quy tuyến tính một biến",
+      "question": "Một đường thẳng học quan hệ diện tích–giá ra sao?",
+      "idea": "Hồi quy đơn biến dùng ŷ=wx+b. MSE=(1/N)Σ(ŷ−y)². Đường thẳng và các đoạn sai số phải lấy từ cùng w,b. Hệ số w là độ thay đổi dự đoán khi x tăng một đơn vị.",
+      "example": "w=0,03 tỷ/m², b=0,3 tỷ. x=60 cho ŷ=2,1 tỷ; nếu y=2,4 tỷ, residual ŷ−y=−0,3 và squared error=0,09 tỷ².",
+      "experiment": "Trong mô phỏng sâu, dừng ở dự đoán, loss, gradient và update. Chọn một nhà, giải thích từng số thay vì chỉ xem đường chuyển động.",
+      "check": "Em tự tính được dự đoán, residual, MSE và đơn vị của chúng.",
+      "pitfall": "Bias là giá trị chặn của mô hình; không nhất thiết có ý nghĩa thị trường ở diện tích 0 ngoài miền dữ liệu.",
+      "practice": {
+        "A": "Mở phòng hồi quy, đổi b và w riêng rẽ; ghi dự đoán trước khi bấm từng bước.",
+        "B": "Với x=3, y=45, b=20, w=7.5, trả về [dự đoán, sai số có dấu, bình phương sai số].",
+        "C": "Thêm một ngoại lệ, huấn luyện lại và giải thích tác động của bình phương sai số.",
+        "hint": "Dùng e = dự đoán − thực tế; đừng bỏ dấu của e.",
+        "solution": "pred = b0 + w0*x0\nanswer = [pred, pred-y0, (pred-y0)**2]"
+      }
+    },
+    {
+      "id": 7,
+      "title": "Mốc 1: mô hình đầu tiên của em",
+      "question": "Em có thực sự hiểu một bước huấn luyện không?",
+      "idea": "Với MSE: ∂L/∂b=2 mean(residual), ∂L/∂w=2 mean(residual×x). Tính cả hai từ tham số cũ rồi cập nhật đồng thời.",
+      "example": "θ=2, gradient=3, α=0,1 → θ mới=1,7. Nếu cộng gradient thành 2,3, đó là đi theo hướng tăng tại điểm hiện tại.",
+      "experiment": "Làm mốc 7 trước khi xem giải thích. Trong notebook điền công thức cập nhật; thử cố ý đổi dấu rồi đối chiếu loss.",
+      "check": "Đạt 6/8 câu và giải thích một gradient bằng lời; không chỉ thuộc đáp án.",
+      "pitfall": "Mốc trắc nghiệm đạt không chứng minh đã biết viết code. Nếu vẫn chưa giải thích được sai số, quay ngày 3/5/6.",
+      "practice": {
+        "A": "So sánh loss khi cộng và khi trừ gradient từ cùng một theta ban đầu.",
+        "B": "Viết bước cập nhật toàn bộ theta bằng gradient của tập train trong ví dụ.",
+        "C": "Che mã mẫu, tự viết lại hàm predict và giải thích từng biến cho thầy.",
+        "hint": "Gradient dùng tất cả các mẫu train; cập nhật đồng thời từ theta cũ.",
+        "solution": "answer = theta - alpha * (2/len(tr) * Z[tr].T @ (Z[tr]@theta-y[tr]))"
+      }
+    },
+    {
+      "id": 8,
+      "title": "Hồi quy nhiều biến và chuẩn hóa",
+      "question": "Khi giá còn phụ thuộc nhiều yếu tố thì đường thẳng trở thành gì?",
+      "idea": "Hồi quy đa biến cộng các đóng góp: ŷ=b+Σwⱼxⱼ. Hai đầu vào tạo mặt phẳng. Chuẩn hóa z=(x−μtrain)/σtrain giúp các đặc trưng có thang đo gần nhau.",
+      "example": "Nếu model học trên z: w gốc=θⱼ/σⱼ; b gốc=θ₀−Σw gốcⱼ μⱼ. Hai cách phải cho cùng dự đoán.",
+      "experiment": "Xoay mặt phẳng 3D, chọn một mẫu; so dự đoán trên dữ liệu chuẩn hóa và đơn vị gốc. Chỉ fit scaler trên train.",
+      "check": "Em kiểm tra được hai cách dự đoán khớp, biết μ/σ đến từ đâu.",
+      "pitfall": "Hệ số không chứng minh nhân quả. Đặc trưng tương quan nhau có thể làm hệ số khó diễn giải ổn định.",
+      "practice": {
+        "A": "Giữ một biến cố định và quan sát đường lát cắt trên mặt phẳng dự đoán.",
+        "B": "Đổi theta=[10,6,−4], mu=[3,2], sd=[2,4] về hệ số gốc [b,w1,w2].",
+        "C": "Tạo hai cột tương quan mạnh và xem hệ số thay đổi dù dự đoán có thể gần nhau.",
+        "hint": "w gốc = theta/sd; b gốc = theta0 − tổng(w gốc × mu).",
+        "solution": "raw_w = theta[1:] / sd\nanswer = np.r_[theta[0] - raw_w @ mu, raw_w]"
+      }
+    },
+    {
+      "id": 9,
+      "title": "Một lần cập nhật dùng bao nhiêu dữ liệu?",
+      "question": "Mỗi bước update có cần đọc hết dữ liệu không?",
+      "idea": "Batch dùng toàn train; SGD dùng một mẫu; mini-batch dùng một nhóm. Gradient ít mẫu nhiễu hơn nhưng mỗi bước rẻ hơn. Epoch là một lượt qua train, khác số update.",
+      "example": "Một mẫu z cho gradient MSE 2(z·θ−y)z. Một epoch với N mẫu và batch size B thường có ceil(N/B) update.",
+      "experiment": "Giữ cùng dữ liệu/khởi tạo, so các chế độ theo số lượt đọc mẫu và loss. Đừng chỉ so số lần bấm.",
+      "check": "Em phân biệt epoch, batch size, update và mô tả vì sao đường SGD dao động.",
+      "pitfall": "Dao động không tự có nghĩa thuật toán sai; so trên cùng ngân sách và metric phù hợp.",
+      "practice": {
+        "A": "Quan sát đường MSE với alpha khác nhau và dự đoán cấu hình nào đi chậm.",
+        "B": "Một mẫu z=[1,2], y=5, theta=[0,0], alpha=0.1: tính theta mới theo SGD và MSE.",
+        "C": "So batch và mini-batch với ngân sách đọc mẫu gần nhau; ghi rõ cách so sánh.",
+        "hint": "Một mẫu có gradient 2e×z; không chia thêm cho số mẫu của tập đầy đủ.",
+        "solution": "answer = theta - alpha * 2 * (z @ theta - target) * z"
+      }
+    },
+    {
+      "id": 10,
+      "title": "Đánh giá một mô hình có đáng tin không?",
+      "question": "Mô hình sai bao nhiêu thì được coi là hữu ích?",
+      "idea": "MAE=mean|error| cùng đơn vị y; RMSE=√MSE cũng cùng đơn vị; R² so với biến thiên y trên tập đang đánh giá và có thể âm. So với baseline trước khi khen mô hình.",
+      "example": "y=[1,3], ŷ=[2,2]: MAE=1, MSE=1, R²=0. Một baseline hằng dễ hiểu là mean train; median train là hằng tối ưu cho MAE trên train.",
+      "experiment": "Tính metric tay trên vài mẫu, rồi xem train/validation. Viết sai số này có chấp nhận được cho mục đích sử dụng không.",
+      "check": "Em báo cáo metric kèm đơn vị, tập đo và baseline.",
+      "pitfall": "Không diễn giải MSE như tiền sai trung bình, vì đơn vị đã bình phương.",
+      "practice": {
+        "A": "So baseline trung bình với mô hình; giải thích từng phần train/validation/test.",
+        "B": "Tính [MAE,MSE,R²] cho truth và pred dưới đây.",
+        "C": "Thêm một ngoại lệ vào dự đoán; giải thích chỉ số nào biến động mạnh.",
+        "hint": "R² dùng tổng bình phương sai số và độ biến động quanh trung bình của truth.",
+        "solution": "err = pred-truth\nanswer = [np.mean(np.abs(err)),np.mean(err**2),1-np.sum(err**2)/np.sum((truth-truth.mean())**2)]"
+      }
+    },
+    {
+      "id": 11,
+      "title": "Overfitting và regularization",
+      "question": "Tại sao model khớp train hơn lại có thể đoán dữ liệu mới kém?",
+      "idea": "Model quá linh hoạt có thể học nhiễu. Tăng độ phức tạp thường giảm train loss nhưng validation có thể tăng. Chọn cấu hình bằng validation, giữ test cho cuối.",
+      "example": "Nếu val loss của bậc [1,2,5] là [0,5;0,2;0,7], chọn bậc 2. Không chọn bậc 5 chỉ vì train loss thấp.",
+      "experiment": "Thay bậc đa thức và số mẫu; quan sát đường dự đoán ngoài vùng train. Ghi một cấu hình underfit và một cấu hình overfit.",
+      "check": "Em chọn được cấu hình bằng validation và mô tả khoảng cách train–validation.",
+      "pitfall": "Chọn quá nhiều lần trên cùng validation cũng có thể làm lựa chọn bám vào validation; ghi số thí nghiệm và giới hạn.",
+      "practice": {
+        "A": "Nhìn hai đường train/validation khi tăng độ phức tạp; dự đoán nơi quá khớp.",
+        "B": "Chọn bậc đa thức theo val_loss, không theo train_loss. Trả về số bậc.",
+        "C": "Thay kích thước tập train hoặc L2, chỉ đổi một yếu tố mỗi lượt.",
+        "hint": "Dữ liệu validation đại diện cho dữ liệu không dùng để fit hệ số.",
+        "solution": "answer = int(degrees[np.argmin(val_loss)])"
+      }
+    },
+    {
+      "id": 12,
+      "title": "Hồi quy logistic cho phân loại",
+      "question": "Làm sao chuyển một tổng có trọng số thành xác suất lớp?",
+      "idea": "Logistic regression: s=w·x+b; p=1/(1+exp(−s)). BCE=−mean[y log p+(1−y)log(1−p)]. Ngưỡng biến p thành nhãn.",
+      "example": "s=0 → p=0,5. p=0,8, y=1 → BCE≈0,2231. p=0,55 với ngưỡng 0,6 cho nhãn 0.",
+      "experiment": "Đổi ngưỡng nhưng giữ w,b; xác nhận vùng nhãn thay đổi còn p/BCE không đổi. Xem gradient và update thật trong mô phỏng sâu.",
+      "check": "Em phân biệt logit, xác suất, nhãn và ngưỡng.",
+      "pitfall": "Tên có regression nhưng ứng dụng điển hình là phân loại; không dùng để xuất giá nhà liên tục.",
+      "practice": {
+        "A": "Thay logit và ngưỡng, phân biệt xác suất với nhãn dự đoán.",
+        "B": "Trả về [sigmoid(0), BCE cho y=1,p=0.8, nhãn của p=0.55 ở ngưỡng 0.6].",
+        "C": "Giữ mô hình, đổi ngưỡng trên validation; giải thích sự thay đổi precision/recall.",
+        "hint": "BCE cho nhãn 1 là −log(p); nhãn chỉ được tạo sau bước so với ngưỡng.",
+        "solution": "answer = [sigmoid(0), -np.log(.8), int(.55 >= .6)]"
+      }
+    },
+    {
+      "id": 13,
+      "title": "KNN: học từ các điểm gần nhau",
+      "question": "Nếu nhà mới giống những nhà đã biết, có thể dự đoán bằng láng giềng không?",
+      "idea": "KNN đo khoảng cách, sắp xếp, chọn k rồi bỏ phiếu khi phân loại. KNN lưu mẫu thay vì học trọng số qua giảm loss như hồi quy.",
+      "example": "Ba láng giềng nhãn [1,0,1] → lớp 1 thắng. Một cột nhân 100 có thể thống trị khoảng cách nếu không chuẩn hóa.",
+      "experiment": "Thử k=1/3/5, đổi đơn vị một trục ×100 rồi bật scaler fit từ train. Theo dõi từng khoảng cách và phiếu.",
+      "check": "Em tính được một khoảng cách và giải thích vì sao đổi đơn vị có thể đổi dự đoán.",
+      "pitfall": "Không đưa mẫu truy vấn vào fit scaler. k nhỏ nhạy nhiễu; k lớn có thể làm mờ cấu trúc.",
+      "practice": {
+        "A": "Vẽ một điểm truy vấn, tìm 1 và 3 láng giềng gần nhất bằng tay.",
+        "B": "Với X=[0,1,2], nhãn [0,0,1], dự đoán cho 1.8 ở k=1 và k=3.",
+        "C": "Nhân một cột lên 100 lần; so trước/sau chuẩn hóa chỉ fit từ train.",
+        "hint": "k=1 lấy nhãn gần nhất; k=3 bỏ phiếu cả ba điểm.",
+        "solution": "answer = [knn_predict(X,y,q,k=1)[0],knn_predict(X,y,q,k=3)[0]]"
+      }
+    },
+    {
+      "id": 14,
+      "title": "Accuracy có thể đánh lừa như thế nào?",
+      "question": "Accuracy cao có luôn tìm đúng nhóm em quan tâm không?",
+      "idea": "Confusion matrix đếm TP/FP/FN/TN. Precision=TP/(TP+FP); recall=TP/(TP+FN); F1 là trung bình điều hòa của precision/recall. Phải chỉ rõ lớp dương.",
+      "example": "TP=3, FP=1, FN=2 → precision=0,75; recall=0,6; F1≈0,6667. Luôn đoán lớp đa số có thể accuracy cao nhưng recall lớp hiếm bằng 0.",
+      "experiment": "Thay ngưỡng và xem confusion matrix. Chọn loại lỗi quan trọng theo bài toán rồi giải thích metric ưu tiên.",
+      "check": "Em tính được precision/recall và nêu ví dụ accuracy gây hiểu nhầm.",
+      "pitfall": "Không dùng accuracy đơn lẻ cho dữ liệu lệch lớp; macro-F1 và F1 lớp dương không phải một khái niệm.",
+      "practice": {
+        "A": "Từ TP,FP,FN,TN, viết một câu diễn giải mỗi loại sai lầm trong bối cảnh cụ thể.",
+        "B": "Tính [precision,recall,F1] cho TP=8,FP=2,FN=4,TN=6.",
+        "C": "Tạo dữ liệu lệch lớp và so accuracy với baseline luôn chọn lớp phổ biến.",
+        "hint": "Precision hỏi các dự đoán dương đúng bao nhiêu; recall hỏi các mẫu dương được tìm ra bao nhiêu.",
+        "solution": "precision=tp/(tp+fp);recall=tp/(tp+fn)\nanswer=[precision,recall,2*precision*recall/(precision+recall)]"
+      }
+    },
+    {
+      "id": 15,
+      "title": "Cây quyết định và cách mô hình đặt câu hỏi",
+      "question": "Cây quyết định chọn câu hỏi phân nhánh bằng cách nào?",
+      "idea": "CART thử đặc trưng/ngưỡng, tính weighted Gini và chọn gain lớn nhất trong các phép chia hợp lệ. Gini=1−Σpₖ². Điều kiện dừng ngăn chia mãi.",
+      "example": "Nút 2 mẫu lớp 0, 2 mẫu lớp 1 có Gini=0,5. Hai lá thuần có weighted Gini=0, gain=0,5.",
+      "experiment": "Xem từng ngưỡng, số mẫu con và cây lớn lên. Đổi max depth/min samples leaf; đưa mẫu mới đi qua đúng cây đang có.",
+      "check": "Em phân biệt Gini cha, weighted Gini con và gain.",
+      "pitfall": "Tính trung bình Gini hai nhánh chỉ đúng khi hai nhánh bằng số mẫu. Cây sâu dễ overfit; mô phỏng hiện chưa có pruning.",
+      "practice": {
+        "A": "Vẽ cây độ sâu 1, đi theo một mẫu và giải thích câu hỏi ở nút gốc.",
+        "B": "Tính mức giảm Gini khi [0,0,1,1] được tách thành [0,0] và [1,1].",
+        "C": "So cây độ sâu 1,2,4 trên cùng validation; không chọn theo train accuracy.",
+        "hint": "Hai lá thuần nhất có Gini bằng 0; cần trừ Gini sau chia có trọng số.",
+        "solution": "answer = gini(parent) - .5*gini(left) - .5*gini(right)"
+      }
+    },
+    {
+      "id": 16,
+      "title": "Mốc 2: tự tổ chức một thí nghiệm ML",
+      "question": "Em có tổ chức được một thí nghiệm không rò rỉ dữ liệu không?",
+      "idea": "Quy trình: xác định mục tiêu → chia dữ liệu → fit tiền xử lý/model trên train → chọn trên validation → đánh giá test cuối. Ghi cấu hình và metric để so công bằng.",
+      "example": "Train [1,2,3] có μ=2, σ=√(2/3). Giá trị mới 100 có z=(100−2)/σ; không đưa 100 vào fit μ/σ.",
+      "experiment": "Làm mốc 16, lập bảng baseline/A/B trên cùng validation. Chỉ mở test sau khi đã chọn cấu hình.",
+      "check": "Đạt 6/8 và chỉ ra nơi fit scaler trong code.",
+      "pitfall": "Đừng thử nhiều model trên test rồi gọi kết quả cao nhất là đánh giá cuối độc lập.",
+      "practice": {
+        "A": "Tìm lỗi trong quy trình chuẩn hóa trước rồi mới chia train/test.",
+        "B": "Chỉ fit chuẩn hóa từ train=[1,2,3]. Trả về [mu,sd,z] cho một giá trị mới 100.",
+        "C": "Đưa tiền xử lý vào từng fold/pipeline; giải thích vì sao dùng toàn bộ dữ liệu gây leakage.",
+        "hint": "Độ lệch chuẩn ở đây dùng ddof=0 giống NumPy mặc định.",
+        "solution": "mu=train_values.mean();sd=train_values.std()\nanswer=[mu,sd,(new_value-mu)/sd]"
+      }
+    },
+    {
+      "id": 17,
+      "title": "K-means và học không có nhãn",
+      "question": "Không có nhãn, máy có thể gom điểm thành nhóm như thế nào?",
+      "idea": "K-means luân phiên gán mỗi điểm vào tâm gần nhất rồi dời tâm về trung bình điểm trong cụm. Inertia là tổng bình phương khoảng cách tới tâm được gán.",
+      "example": "Một cụm gồm 0,2,4 thì tâm mới=2. Khởi tạo khác nhau có thể dẫn tới nghiệm khác nhau.",
+      "experiment": "Xem riêng bước gán và bước dời tâm. Đổi k/khởi tạo, ghi inertia và kiểm tra cụm rỗng được xử lý ra sao.",
+      "check": "Em giải thích được một lần tâm dịch chuyển từ các điểm thành viên.",
+      "pitfall": "Cụm không tự có tên/ý nghĩa kinh doanh; cần diễn giải và kiểm tra độ ổn định. Nhãn cụm 0/1 có thể đổi tên giữa hai lần chạy.",
+      "practice": {
+        "A": "Tự gán 4 điểm vào tâm 0 và 10, rồi dự đoán tâm mới.",
+        "B": "Sau một vòng K-means cho [0,2,8,10] với tâm [0,10], trả về hai tâm mới theo thứ tự.",
+        "C": "Thử ba khởi tạo trên cùng dữ liệu 2D; giải thích vì sao cụm không nhất thiết là nhãn thật.",
+        "hint": "Gán theo tâm cũ, rồi lấy trung bình từng nhóm để cập nhật đồng thời.",
+        "solution": "labels=np.abs(points[:,None]-old_centers[None,:]).argmin(1)\nanswer=[points[labels==j].mean() for j in range(2)]"
+      }
+    },
+    {
+      "id": 18,
+      "title": "PCA: nhìn dữ liệu từ một hướng khác",
+      "question": "Làm sao nén nhiều chiều mà giữ nhiều biến thiên nhất?",
+      "idea": "PCA trừ trung bình rồi tìm các trục trực giao có phương sai giảm dần. Chiếu lấy tọa độ mới, tái tạo đưa về không gian cũ. Phương sai cao không đồng nghĩa thông tin tốt nhất cho mọi nhãn.",
+      "example": "Giữ một trục thường mất thông tin. Giữ đủ hai trục trong ví dụ 2D tái tạo gần đúng dữ liệu gốc, sai số chỉ do số học.",
+      "experiment": "Đổi đơn vị x₂ ×100 rồi so chuẩn hóa/không chuẩn hóa; thêm ngoại lệ và thử hướng chiếu tự chọn.",
+      "check": "Em đọc được explained variance ratio và reconstruction error, nêu hệ tọa độ dùng tính chúng.",
+      "pitfall": "Chuẩn hóa dùng σ với ddof=0, covariance mẫu dùng n−1 trong bài; hai mẫu số phục vụ hai phép tính khác nhau. Dấu eigenvector có thể đảo mà cùng không gian.",
+      "practice": {
+        "A": "Xoay hướng chiếu một đám điểm dài; dự đoán hướng giữ nhiều phương sai.",
+        "B": "Với ba điểm cùng đường y=x, tính tỷ lệ phương sai của thành phần PCA đầu tiên.",
+        "C": "Tạo hai cột khác đơn vị và so PCA trước/sau chuẩn hóa.",
+        "hint": "Dữ liệu nằm hoàn toàn trên một đường nên một thành phần giữ toàn bộ phương sai khác 0.",
+        "solution": "answer = ratio[0]"
+      }
+    },
+    {
+      "id": 19,
+      "title": "Một mạng nơ-ron tính toán như thế nào?",
+      "question": "Một nút nơ-ron tính gì trước khi cả mạng dự đoán?",
+      "idea": "Neuron trước hết tính z=x·w+b, rồi áp dụng hàm kích hoạt. Với x=[1,3], w=[2,−1] và b=0,5, z=−0,5 và ReLU(z)=0. Phi tuyến giúp nhiều lớp kết hợp thành một ánh xạ có thể biểu diễn những quan hệ mà chuỗi các lớp affine không biểu diễn được.",
+      "example": "x=[1,−1], w=[0,5;0,3], b=0 → z=0,2. ReLU(z)=0,2; nếu z âm thì ReLU=0. Mô phỏng sâu dùng tanh ở lớp ẩn và sigmoid đầu ra.",
+      "experiment": "Chọn một mẫu, dừng ở đầu vào/lớp ẩn/đầu ra; tính z,a và logit s trước khi xem số.",
+      "check": "Em phân biệt activation lớp ẩn với sigmoid lớp ra và đọc được kích thước mạng.",
+      "pitfall": "Không gọi mọi giá trị trong nút là xác suất; z và tanh activation có thể âm.",
+      "practice": {
+        "A": "Vẽ một neuron với x1,x2,b; theo dõi từng tích và tổng trước activation.",
+        "B": "Tính [logit,ReLU(logit)] với x=[1,3], w=[2,−1], b=0.5.",
+        "C": "So mạng tuyến tính và mạng có phi tuyến trên XOR, giữ nguyên dữ liệu.",
+        "hint": "Tính tổng có trọng số trước khi áp dụng ReLU.",
+        "solution": "logit=x@w+b\nanswer=[logit,max(0,logit)]"
+      }
+    },
+    {
+      "id": 20,
+      "title": "Backpropagation: gradient đi ngược ra sao?",
+      "question": "Sai số truyền ngược qua mạng bằng quy tắc nào?",
+      "idea": "Trong lượt forward, w=1 và x=2 cho dự đoán 2, sai lệch −3 so với y=5 và loss bằng 9. Backprop dùng quy tắc dây chuyền để nhân 2(−3) với x=2, thu được dL/dw=−12. Sau khi có gradient, bộ tối ưu mới dùng nó để cập nhật w.",
+      "example": "p=0,8, y=1, N=4 → δra=−0,05. v=2, a=0,6 → δẩn=−0,064. Mỗi đóng góp đã chia N; không chia lại khi cộng.",
+      "experiment": "Chọn một cạnh, so gradient giải tích và sai phân trung tâm [L(θ+ε)−L(θ−ε)]/(2ε). Xem toàn bộ gradient trước update đồng thời.",
+      "check": "Em giải thích được dấu gradient và khớp một kiểm tra sai phân số.",
+      "pitfall": "Không cập nhật v trước khi dùng nó để tính δẩn cho cùng lượt. ε quá nhỏ có thể chịu sai số số học.",
+      "practice": {
+        "A": "Vẽ đường w → wx → wx−y → loss và ghi đạo hàm trên từng cạnh.",
+        "B": "Tính dL/dw cho L=(wx−y)² tại w=1,x=2,y=5.",
+        "C": "Kiểm tra gradient bằng sai phân số với nhiều epsilon; giải thích sai số làm tròn.",
+        "hint": "Chain rule nhân đạo hàm của bình phương với đạo hàm wx theo w.",
+        "solution": "answer = 2*(w*x-y)*x"
+      }
+    },
+    {
+      "id": 21,
+      "title": "Mốc 3: xem mạng nơ-ron học biên quyết định",
+      "question": "Mạng học XOR là do hoạt ảnh hay do trọng số thay đổi thật?",
+      "idea": "Quan sát forward → loss → backward → update từ cùng bộ tham số. So lớp ẩn tanh và tuyến tính trên XOR để thấy vai trò phi tuyến.",
+      "example": "Hợp thành các lớp affine vẫn affine, ranh giới sigmoid vẫn tuyến tính. XOR có hai góc đối nhau cùng lớp nên không thể tách bằng một đường thẳng.",
+      "experiment": "Làm mốc 21. Giữ seed, dữ liệu, số nút và chỉ đổi activation. Tải trace rồi chạy Mang_no_ron_tung_buoc.ipynb để kiểm chứng.",
+      "check": "Đạt 6/8; tự tính một gradient, chỉ ra cạnh đổi sau update và phân biệt accuracy train với khả năng tổng quát hóa.",
+      "pitfall": "Accuracy 100% trên bốn điểm XOR không chứng minh tốt trên dữ liệu chưa thấy; nhiều nút không luôn tốt hơn.",
+      "practice": {
+        "A": "Quan sát loss và biên quyết định của mạng nhỏ trên hai nửa vành trăng.",
+        "B": "Tính xác suất forward cho mạng tanh hai nút ẩn được cho, không huấn luyện thêm.",
+        "C": "Chỉ đổi số nút ẩn hoặc learning rate; so validation và ghi 3 trạng thái học.",
+        "hint": "Tính xW+b → tanh → nhân V → sigmoid; chú ý shape.",
+        "solution": "answer = sigmoid(np.tanh(x0 @ W0 + b0) @ V0).ravel()"
+      }
+    },
+    {
+      "id": 22,
+      "title": "Từ pixel đến ý tưởng CNN",
+      "question": "Bộ lọc nhìn một vùng ảnh rồi tạo feature map thế nào?",
+      "idea": "Bộ lọc ảnh tính một đầu ra từ một vùng cố định quanh vị trí đang xét. Với cửa sổ 3×3, ta nhân từng giá trị ảnh với phần tử kernel tương ứng rồi cộng. Vùng lân cận của một nút đồ thị do các cạnh quyết định và có thể lớn nhỏ khác nhau, nên GCN cần một cách tổng hợp phù hợp với cấu trúc đó.",
+      "example": "Kích thước output=floor((H+2P−K)/S)+1. Ảnh 5×5, kernel 3×3, P=0, S=1 → 3×3; S=2 → 2×2.",
+      "experiment": "Bật/tắt một pixel, đoán cửa sổ nào bị ảnh hưởng. Theo dõi tích, tổng, ReLU, pooling; đổi stride/padding và kiểm chứng JSON bằng notebook.",
+      "check": "Em tính được một ô output và nói được thông tin nào mất sau ReLU/pooling.",
+      "pitfall": "Kernel trong bài được đặt sẵn. Mô phỏng chưa học bộ lọc, chưa phân loại ảnh và không có accuracy CNN.",
+      "practice": {
+        "A": "Tính một vị trí lọc trung bình 3×3 trên ảnh 5×5 bằng tay.",
+        "B": "Áp bộ lọc trung bình 3×3 kiểu valid cho image; trả về ảnh 3×3.",
+        "C": "So bộ lọc trung bình với bộ lọc cạnh; giải thích bộ lọc cố định khác bộ lọc CNN học được.",
+        "hint": "Valid không thêm padding; mỗi vị trí là tổng của một cửa sổ nhân kernel.",
+        "solution": "answer = conv_valid(image,kernel3)"
+      }
+    },
+    {
+      "id": 23,
+      "title": "Biến câu chữ thành đầu vào cho mô hình",
+      "question": "Máy làm toán với một câu tiếng Việt bằng cách nào?",
+      "idea": "Văn bản phải được biến thành token và số. Bag-of-words đếm token theo một vocabulary có thứ tự. Cách token hóa ảnh hưởng đầu vào và từ chưa có trong vocabulary.",
+      "example": "\"em học AI em\" với vocab [em,học,AI] → [2,1,1] nếu giữ nguyên hoa/thường và tách bằng khoảng trắng.",
+      "experiment": "Thêm dấu câu, đổi hoa/thường hoặc thứ tự từ; xem vector đếm đổi gì và không đổi gì.",
+      "check": "Em mô tả được quy tắc token hóa và hạn chế mất thứ tự của bag-of-words.",
+      "pitfall": "Tách bằng khoảng trắng không phải giải pháp token hóa tiếng Việt đầy đủ; token không luôn tương ứng một từ theo nghĩa ngôn ngữ.",
+      "practice": {
+        "A": "Lập vocabulary cho ba câu; thử hai câu đổi thứ tự từ nhưng có cùng số đếm.",
+        "B": "Với vocab=[hoc,ai,hay], tạo vector đếm cho câu “hoc ai ai”.",
+        "C": "Thêm TF-IDF fit trên train; giải thích vì sao vocabulary/IDF không nên học từ test.",
+        "hint": "Đếm theo đúng thứ tự vocabulary, không theo thứ tự từ xuất hiện.",
+        "solution": "answer = [text.split().count(token) for token in vocab]"
+      }
+    },
+    {
+      "id": 24,
+      "title": "Embeddings và ý tưởng Word2Vec",
+      "question": "Hai vector gần nhau có nghĩa là hai từ giống nhau không?",
+      "idea": "Embedding biểu diễn một đối tượng bằng vector để mô hình có thể tính quan hệ giữa các đối tượng. Word2Vec học vector của từ từ ngữ cảnh, còn network embedding có thể dùng liên kết giữa các nút. Với hai vector a=[1,0] và b=[1,1], cosine bằng 1/√2 và phản ánh góc giữa chúng.",
+      "example": "a=[1,0], b=[1,1] có cosine=1/√2≈0,7071; a=[0,0] thì cosine không xác định nếu không có quy ước xử lý.",
+      "experiment": "Tự đổi một tọa độ và vẽ vị trí vector; so cosine với khoảng cách Euclidean.",
+      "check": "Em tính được cosine và phân biệt vector đặt tay với embedding đã học như Word2Vec.",
+      "pitfall": "Bài minh họa vector chưa huấn luyện Word2Vec thật; gần trên hình đặt tay không chứng minh ngữ nghĩa ngôn ngữ.",
+      "practice": {
+        "A": "Vẽ hai vector và dự đoán cosine lớn hay nhỏ trước khi tính.",
+        "B": "Tính cosine giữa a=[1,0] và b=[1,1].",
+        "C": "Dùng bảng đồng xuất hiện nhỏ để so từ gần ngữ cảnh; phân biệt vector minh họa với embedding đã học.",
+        "hint": "Cosine chuẩn hóa dot product bằng tích độ dài; không phải khoảng cách Euclidean.",
+        "solution": "answer = (a @ b) / (np.linalg.norm(a)*np.linalg.norm(b))"
+      }
+    },
+    {
+      "id": 25,
+      "title": "Attention và Transformer ở mức trực giác",
+      "question": "Attention tổng hợp thông tin từ các token khác ra sao?",
+      "idea": "Attention chấm điểm từng ứng viên, chuẩn hóa các điểm hợp lệ bằng softmax rồi lấy tổng có trọng số của các vector giá trị. Bài này dùng điểm q·k/√dₖ cho token. Trong GAT, tập ứng viên là hàng xóm theo đồ thị và hàm chấm điểm có thể dùng tham số học được riêng.",
+      "example": "Với query đầu và causal mask, chỉ key đầu được phép nên weights=[1,0,0,0], output=V đầu. Temperature thêm vào để thí nghiệm; T=1 là công thức chuẩn ở đây.",
+      "experiment": "Chọn query, tính một dot product rồi bật mask. Đổi temperature hoặc vector AI, kiểm chứng toàn bộ ma trận trong CNN_va_Attention_tung_buoc.ipynb.",
+      "check": "Em chỉ ra trục query/key, tính được tổng có trọng số và giải thích stable softmax trừ max hàng.",
+      "pitfall": "Đây là một head với W đặt tay, chưa train Transformer. Attention weight cao không tự là bằng chứng nhân quả hoặc hiểu ngôn ngữ.",
+      "practice": {
+        "A": "Đoán token nào nhận trọng số lớn khi query gần key của nó.",
+        "B": "Tính attention weights cho query q và K, chia sqrt(d_k) rồi softmax.",
+        "C": "Tính vector tổng có trọng số weights@V; thay query và giải thích heatmap.",
+        "hint": "Softmax tạo các trọng số dương có tổng bằng 1; bài này chỉ là một head nhỏ.",
+        "solution": "answer = softmax(q @ K.T / np.sqrt(K.shape[1]))"
+      }
+    },
+    {
+      "id": 26,
+      "title": "Mô hình ngôn ngữ, truy xuất và kiểm chứng",
+      "question": "Một câu trả lời có tài liệu đi kèm đã chắc đúng chưa?",
+      "idea": "Retrieval tìm đoạn liên quan; generation tạo câu. RAG đưa đoạn truy xuất vào ngữ cảnh cho bộ sinh nhưng vẫn cần kiểm tra câu trả lời có được nguồn hỗ trợ hay không.",
+      "example": "Nếu scores=[0,2;0,8;0,3], argmax chọn tài liệu chỉ số 1. Điểm cao nhất chỉ nói tương đối theo bộ chấm hiện tại, không bảo đảm nguồn đúng.",
+      "experiment": "Đặt câu có/không có bằng chứng trong kho. Ghi đoạn nguồn hỗ trợ từng khẳng định và chấp nhận trả lời chưa đủ dữ liệu.",
+      "check": "Em phân biệt truy xuất, tạo sinh, trích nguồn và xác minh nội dung.",
+      "pitfall": "Bài hiện minh họa truy xuất có kiểm soát; chưa chạy LLM đầy đủ. Văn bản trôi chảy và có citation vẫn có thể suy diễn sai.",
+      "practice": {
+        "A": "Đọc một câu trả lời và chỉ ra câu nào có đoạn bằng chứng hỗ trợ, câu nào cần kiểm chứng.",
+        "B": "Truy xuất đoạn có nhiều từ truy vấn trùng nhất; trả về chỉ số bắt đầu từ 0.",
+        "C": "Thiết kế bảng 5 câu hỏi để so câu trả lời có/không có ngữ cảnh; chỉ gọi là RAG khi có cả truy xuất và bước tạo câu trả lời.",
+        "hint": "Dùng chỉ số của score lớn nhất; bài không yêu cầu gọi API.",
+        "solution": "answer = int(np.argmax(scores))"
+      }
+    },
+    {
+      "id": 27,
+      "title": "Học tăng cường và đánh đổi khám phá/khai thác",
+      "question": "Khi chưa biết lựa chọn nào tốt, nên thử hay dùng điều đã biết?",
+      "idea": "Bandit cân bằng exploration/exploitation. ε-greedy chọn ngẫu nhiên với xác suất ε, còn lại chọn Q cao nhất. Q là ước lượng reward, không phải reward chắc chắn.",
+      "example": "Q cũ=0,5, count cũ=3, reward mới=1 → Q mới=0,5+(1−0,5)/4=0,625. Count mới bằng 4.",
+      "experiment": "So ε=0 và ε>0 qua nhiều seed; đọc đường reward trung bình và số lần thử mỗi tay, không chỉ xem lần chạy đẹp nhất.",
+      "check": "Em tính được update trung bình tăng dần và giải thích việc thăm dò ban đầu.",
+      "pitfall": "Bandit đơn giản chưa phải toàn bộ reinforcement learning; ví dụ này chưa có chuỗi trạng thái và tác động dài hạn.",
+      "practice": {
+        "A": "Giải thích một hành động khám phá dù phần thưởng ước lượng đang thấp hơn.",
+        "B": "Q cũ=0.4 sau 4 lượt, reward mới=1: cập nhật bằng trung bình tăng dần.",
+        "C": "So epsilon=0 và 0.1 trên nhiều seed, báo cả biến động thay vì một đường đẹp.",
+        "hint": "Mẫu thưởng mới là lượt thứ 5; không chia cho số lượt cũ.",
+        "solution": "answer = old_Q + (reward-old_Q)/(old_count+1)"
+      }
+    },
+    {
+      "id": 28,
+      "title": "Dự án cuối, buổi 1: đặt đúng câu hỏi",
+      "question": "Dự án riêng của em trả lời câu hỏi gì, cho ai?",
+      "idea": "Viết project brief: người dùng, dự đoán cần làm, X có lúc nào, y lấy từ đâu, metric, baseline và cách chia dữ liệu. Giới hạn bài toán đủ nhỏ để hoàn thành.",
+      "example": "Dự án mẫu cuối dùng Iris 150 mẫu, phân tầng 90/30/30. Dự án giá nhà thực dùng tuổi nhà, khoảng cách MRT, số cửa hàng; không tự tạo cột diện tích không tồn tại.",
+      "experiment": "Mở rubric trước khi code. Viết ít nhất một tiêu chí thành công, nguồn dữ liệu và lý do chia tập. Chọn dự án giá nhà hoặc Iris để hoàn tất một vòng.",
+      "check": "Có brief, schema, split không giao nhau, baseline chỉ fit train và nhật ký quyết định.",
+      "pitfall": "Dữ liệu theo thời gian/nhóm có thể cần chia theo thời gian/nhóm; random split không tự phù hợp mọi trường hợp.",
+      "practice": {
+        "A": "Viết project brief: bài toán, 4 đặc trưng, 3 lớp, baseline và chỉ số chính.",
+        "B": "Tạo ba phần Iris có phân tầng theo iris_split; trả về số mẫu [train,validation,test].",
+        "C": "Chốt seed và lưu chỉ số mẫu của mỗi phần; ghi rõ nếu test đã được xem trong thử nghiệm trước.",
+        "hint": "Mỗi lớp có 30 train, 10 validation và 10 test; test được để riêng.",
+        "solution": "answer = [len(tr), len(va), len(te)]"
+      }
+    },
+    {
+      "id": 29,
+      "title": "Dự án cuối, buổi 2: thí nghiệm và phân tích lỗi",
+      "question": "Model tốt hơn là do ý tưởng đúng hay do cách so sánh thiếu công bằng?",
+      "idea": "Ghi bảng cấu hình, seed, train/validation metric, chi phí và ví dụ lỗi. Đổi một yếu tố mỗi thí nghiệm. Chọn cấu hình bằng validation.",
+      "example": "Bảng minh họa: train KNN=0,98/cây=1,00, val KNN=0,93/cây=0,90 → chọn KNN theo val. Các số này khác kết quả Iris được tính thực trong notebook.",
+      "experiment": "Chạy baseline và hai model trên cùng split. Liệt kê năm lỗi khó và tìm nhóm mẫu gây sai; không chỉ báo một con số.",
+      "check": "Có bảng thí nghiệm và lý do chọn model, cùng biểu đồ đúng nhãn/đơn vị.",
+      "pitfall": "Không gộp số minh họa với metric thật của lần chạy. Không sửa siêu tham số theo test sau khi đã xem kết quả cuối.",
+      "practice": {
+        "A": "So hai mô hình trên cùng validation; giải thích vì sao train accuracy cao chưa đủ.",
+        "B": "Trong bảng minh họa val_scores, chọn tên mô hình tốt nhất. Không chọn theo train_scores.",
+        "C": "Với thí nghiệm thực, ghi cấu hình, seed và 5 dự đoán validation sai (hoặc toàn bộ nếu ít hơn).",
+        "hint": "Chọn theo validation và tiêu chí đã định; test không tham gia lựa chọn.",
+        "solution": "answer = model_names[int(np.argmax(val_scores))]"
+      }
+    },
+    {
+      "id": 30,
+      "title": "Dự án cuối, buổi 3: đánh giá và giải thích",
+      "question": "Người khác có chạy lại và hiểu kết quả của em không?",
+      "idea": "Đóng băng lựa chọn, đo test, trình bày metric kèm giới hạn; Restart & Run All kiểm tra notebook không dựa biến ẩn. Tự chấm rubric bằng minh chứng, không bằng cảm giác.",
+      "example": "Rubric có trọng số [15,20,15,20,15,15], mỗi mức 0–4: tiêu chí 20 điểm mức 3 được 15 điểm. Tổng 85 nhưng thiếu minh chứng một tiêu chí vẫn chưa đủ.",
+      "experiment": "Tạo báo cáo 1–2 trang, chạy lại từ kernel mới, xuất tiến độ và báo cáo rubric. Dùng Tu_kiem_tra_va_Rubric.ipynb đối chiếu quy tắc tính điểm.",
+      "check": "Đủ sáu tiêu chí có mức/minh chứng và tổng tự đánh giá ≥70; giải thích được một dự đoán và ba giới hạn.",
+      "pitfall": "Điểm tự đánh giá không phải chứng chỉ hay kiểm chứng độc lập. Nếu Restart & Run All lỗi, sửa luồng phụ thuộc thay vì chạy lại tùy ý đến khi hết lỗi.",
+      "practice": {
+        "A": "Chốt mô hình trước khi mở kết quả test; kiểm tra notebook chạy lại từ kernel sạch.",
+        "B": "Tạo báo cáo [số mẫu test,accuracy,macro-F1] cho mô hình đã chọn bằng validation.",
+        "C": "Chuẩn bị 5 slide: bài toán, dữ liệu, baseline, kết quả, giới hạn; nêu một hướng cải tiến không dựa vào chỉnh theo test.",
+        "hint": "Báo cả số mẫu và macro-F1; chất lượng quy trình quan trọng hơn một ngưỡng accuracy cố định.",
+        "solution": "answer = [len(te), accuracy(y[te],final_pred), macro_f1(y[te],final_pred)]"
+      }
+    }
+  ],
+  "troubleshooting": [
+    [
+      "Bấm web không hoạt động",
+      "Giải nén toàn bộ gói vào một thư mục. Trên Mac mở Mo_Jupyter_Studio.command hoặc Mo_ML_Studio.command; giữ Terminal mở. Dùng URL mà launcher in ra, thường http://127.0.0.1:8765/. Đừng chỉ mở HTML rồi trông chờ Notebook Server đã có."
+    ],
+    [
+      "Jupyter không kết nối",
+      "Đọc lỗi trong Terminal launcher. Kiểm tra có Python từ 3.11 và môi trường với requirements-jupyter.txt. Launcher cài lần đầu cần mạng. Không xóa môi trường/đổi nhiều kernel cùng lúc; chọn Python 3 do launcher tạo. Không chia sẻ URL chứa token."
+    ],
+    [
+      "Notebook NameError hoặc kết quả lạ",
+      "Restart kernel, chạy từ trên xuống. Ô hỗ trợ đầu notebook tạo dữ liệu/hàm dùng chung; không bỏ qua. Nếu cần học một hàm, mở định nghĩa trong ô hỗ trợ. Restart & Run All phát hiện biến còn sót từ lần trước."
+    ],
+    [
+      "Bài B in CHƯA HOÀN THÀNH",
+      "Đó là trạng thái có chủ ý khi answer=None, không phải lỗi server. Thay placeholder bằng biểu thức của em. Lưu, chạy lại ô. Nếu AssertionError, so shape, đơn vị, tham số cũ/mới và công thức trước khi xem lời giải."
+    ],
+    [
+      "Loss tăng, NaN hoặc đứng yên",
+      "Kiểm tra dữ liệu hữu hạn, kiểu số, scale, dấu gradient, định nghĩa loss, chia N, learning rate và activation. Giảm α để thử nguyên nhân; giữ seed rồi đổi một yếu tố. So một gradient bằng sai phân số."
+    ],
+    [
+      "Điểm mô hình quá đẹp",
+      "Kiểm tra nhãn có lọt vào X không; scaler có fit toàn dữ liệu không; mẫu trùng hoặc cùng nhóm có xuất hiện hai tập không; test có được dùng chọn cấu hình không. Xác nhận metric đo train hay dữ liệu độc lập."
+    ],
+    [
+      "Không lưu được tiến độ",
+      "Xuất tiến độ JSON và lưu bản riêng trước khi đóng trình duyệt. Nhập tại Học liệu. Dữ liệu lưu theo trình duyệt và địa chỉ truy cập; đổi cổng/trình duyệt có thể thấy trạng thái khác. Notebook Jupyter cần Save riêng; xuất JSON web không sao lưu code notebook."
+    ],
+    [
+      "Đổi máy hoặc mất mạng",
+      "Giữ cả ZIP, thư mục đã giải nén, notebook đã sửa, dữ liệu riêng và JSON tiến độ. Cẩm nang Markdown đọc offline. Jupyter/React build dùng local sau khi các thư viện đã được cài; cài lần đầu hoặc chức năng tải runtime bên ngoài vẫn có thể cần mạng."
+    ]
+  ],
+  "glossary": [
+    [
+      "Sample",
+      "Một quan sát/một hàng dữ liệu."
+    ],
+    [
+      "Feature",
+      "Thông tin đầu vào có ở thời điểm dự đoán."
+    ],
+    [
+      "Target/label",
+      "Giá trị hoặc nhãn muốn dự đoán."
+    ],
+    [
+      "Parameter",
+      "Hệ số được học, ví dụ w và b."
+    ],
+    [
+      "Hyperparameter",
+      "Thiết lập lựa chọn, ví dụ learning rate hoặc độ sâu."
+    ],
+    [
+      "Loss",
+      "Hàm số đo sai dùng trong tối ưu."
+    ],
+    [
+      "Metric",
+      "Chỉ số đánh giá theo mục tiêu sử dụng."
+    ],
+    [
+      "Gradient",
+      "Vector đạo hàm loss theo tham số."
+    ],
+    [
+      "Epoch",
+      "Một lượt đọc qua train theo quy trình huấn luyện."
+    ],
+    [
+      "Batch",
+      "Nhóm mẫu dùng cho một lần tính gradient."
+    ],
+    [
+      "Baseline",
+      "Mốc so sánh đơn giản được định nghĩa trước."
+    ],
+    [
+      "Leakage",
+      "Thông tin không được phép lọt vào quá trình fit/chọn model."
+    ],
+    [
+      "Validation",
+      "Dữ liệu phát triển để chọn cấu hình."
+    ],
+    [
+      "Test",
+      "Dữ liệu đánh giá cuối sau khi chốt lựa chọn."
+    ],
+    [
+      "Residual",
+      "Dự đoán trừ giá trị thật theo quy ước của bài."
+    ],
+    [
+      "Logit",
+      "Tổng có trọng số trước sigmoid/softmax."
+    ],
+    [
+      "Activation",
+      "Hàm biến đổi đầu ra của một nút/lớp."
+    ],
+    [
+      "Backpropagation",
+      "Tính gradient qua chuỗi phép toán bằng chain rule."
+    ],
+    [
+      "Embedding",
+      "Vector biểu diễn một đối tượng."
+    ],
+    [
+      "Token",
+      "Đơn vị văn bản theo bộ tách đang dùng."
+    ],
+    [
+      "Attention",
+      "Tổng hợp V bằng trọng số tính từ Q và K."
+    ],
+    [
+      "Inference",
+      "Dùng mô hình đã học để tính đầu ra mới."
+    ],
+    [
+      "Reproducibility",
+      "Khả năng chạy lại theo cùng dữ liệu, cấu hình và môi trường."
+    ],
+    [
+      "Generalization",
+      "Khả năng làm tốt trên dữ liệu ngoài tập học theo bối cảnh xét."
+    ]
+  ],
+  "continuation": [
+    "Tháng tiếp: làm lại dự án với bộ dữ liệu mới, tự viết pipeline và báo cáo lỗi trước khi tăng độ phức tạp.",
+    "Bổ sung nền tảng theo nhu cầu: Python/NumPy/Pandas, đại số tuyến tính, xác suất và đạo hàm. Khi gặp công thức mới, thử ma trận 2×2 và dữ liệu vài mẫu.",
+    "Sau khi vững vòng ML: học một framework deep learning, autograd và huấn luyện CNN thực trên dữ liệu nhỏ; rồi mới mở rộng Transformer.",
+    "Đọc tài liệu chính thức của NumPy, pandas, scikit-learn, Jupyter và framework đang dùng. Ghi phiên bản, chạy ví dụ nhỏ; không sao chép code mà không hiểu shape và tập dữ liệu sử dụng."
+  ],
+  "limits": "Web hiện có mô phỏng sâu cho hồi quy đơn/đa biến, logistic, KNN, K-means, cây, PCA, mạng nơ-ron, CNN và attention (14 ngày); các ngày khác dùng mô phỏng cơ bản. CNN/attention dùng trọng số đặt sẵn để dạy forward, chưa train CNN/Transformer. Bộ mốc chấm đáp án trắc nghiệm; rubric do em tự đánh giá, minh chứng chưa được thẩm định tự động. Kiểm tra tính toán không thay kiểm tra giao diện thật hoặc đánh giá khoa học trên dữ liệu mới.",
+  "markdown": "# Cẩm nang tự học AI 30 ngày\n\nCẩm nang này được viết để em tự học tiếp mà không cần chờ một cuộc trò chuyện mới. Đích 30 ngày là hoàn thành một vòng dự án AI có thể giải thích và chạy lại: từ câu hỏi, dữ liệu, mô hình đến đánh giá và giới hạn. Các chủ đề rộng như CNN, Transformer và reinforcement learning được giới thiệu ở mức nền tảng; không coi 30 ngày là học xong toàn bộ AI.\n\n## Bắt đầu ngay từ dự án giá nhà\n\n1. Viết câu hỏi: dự đoán giá nào, ở thời điểm nào, bằng thông tin nào? Chốt đơn vị và người sử dụng trước khi chọn model.\n2. Phân biệt hai dữ liệu trên web: ví dụ diện tích–giá là tổng hợp; bộ UCI Real Estate có 414 giao dịch, cột tuổi nhà, khoảng cách MRT, số cửa hàng, tọa độ và giá trên đơn vị diện tích. Cột đích price_10k_ntd_per_ping có đơn vị 10.000 TWD/ping, không phải tỷ VND hay tổng giá căn nhà.\n3. Đọc schema và kiểm tra missing, miền giá trị, trùng lặp. Không dùng id như bằng chứng giá trị thị trường. Trong thí nghiệm web, các đặc trưng tuổi nhà/khoảng cách MRT/cửa hàng được dùng để minh họa.\n4. Chia train/validation/test; fit scaler và model chỉ trên train. Dự đoán hằng từ train làm baseline. So MAE của model và baseline trên cùng validation; chưa nhìn test để chọn cấu hình.\n5. Vẽ giá thật–dự đoán, residual và các lỗi lớn. Tự giải thích một dòng: đầu vào → chuẩn hóa → đóng góp hệ số → dự đoán → sai số.\n6. Đóng băng lựa chọn rồi đánh giá test. Bộ dữ liệu này thuộc bối cảnh khác Việt Nam; random split trên cùng tập chưa chứng minh dùng được để định giá bất động sản tại nơi em sống. Báo cáo giới hạn và điều kiện cần thu thập dữ liệu mới.\n\n## Một buổi học 2–3 giờ\n\n- 10 phút: nhớ lại bài trước mà chưa mở đáp án; nói thành lời một ý chính.\n- 15 phút: mở mô phỏng, dự đoán rồi tiến từng bước; ghi một điều khác dự đoán.\n- 20 phút: đọc phần giải thích đúng chỗ đang vướng, tính tay một ví dụ nhỏ.\n- 60 phút: làm A/B, sửa code, chạy kiểm tra; C chỉ khi còn thời gian.\n- 15 phút: viết nhật ký gồm em đổi gì, quan sát gì, vì sao và điều chưa chắc. Sau ngày 7/16/21 làm bài mốc trong cùng buổi hoặc dùng phần giờ thứ ba.\n\n## Khi em bị mắc kẹt\n\n- Nếu không hiểu: giảm về một mẫu, một đặc trưng hoặc một phép toán.\n- Nếu chưa làm được B: tính tay ví dụ số nhỏ, đọc gợi ý; chỉ xem lời giải sau một lần thử thật.\n- Sau khi xem lời giải: đóng lại, viết lại từ đầu, đổi số và giải thích vì sao vẫn đúng.\n- Nếu học chậm hơn lịch: kéo dài một ngày thành hai buổi; ưu tiên hoàn tất A/B, giữ C tùy chọn. Không đánh dấu hoàn thành chỉ để theo kịp lịch.\n\n## Nền tảng cần tra cứu\n\n### Từ dữ liệu đến mô hình\n\nDữ liệu là các quan sát; đặc trưng X là đầu vào; mục tiêu y là đầu ra mong muốn. Mô hình là hàm có tham số θ. Huấn luyện dùng dữ liệu train để chọn θ; suy luận áp dụng θ đã học vào đầu vào mới. Mô hình có thể trả lời sai dù code chạy đúng.\n\nDự đoán: ŷ=fθ(X). Học: tìm θ làm loss train nhỏ, rồi kiểm tra khả năng dùng ngoài train.\n\n### Ba vai trò của dữ liệu\n\nTrain để fit tham số và tiền xử lý. Validation để chọn cấu hình. Test cho đánh giá cuối sau lựa chọn. Mọi dữ liệu có thể vô tình mang thông tin tương lai, nhóm trùng hoặc nhãn vào X; hãy kiểm tra trước khi chia và fit.\n\nfit scaler(train) → transform(train/validation/test) bằng cùng scaler.\n\n### Loss, metric, baseline\n\nLoss phục vụ tối ưu; metric phục vụ đánh giá mục tiêu sử dụng. Hai thứ có thể khác nhau. Baseline là cách đơn giản cần vượt qua, chẳng hạn dự đoán mean/median train hoặc lớp đa số. Báo cáo con số phải có tập đo, đơn vị và baseline.\n\nMSE=mean((ŷ−y)²); MAE=mean(|ŷ−y|); BCE=−mean(y ln p+(1−y)ln(1−p)).\n\n### Tham số và siêu tham số\n\nw,b là tham số học được. Learning rate, k của KNN, max depth, số nút ẩn là siêu tham số do người thiết kế chọn theo thí nghiệm phù hợp. Seed giúp tái lập ngẫu nhiên; cùng seed không làm model đúng về mặt khoa học.\n\nθ mới = θ cũ − α∇L(θ cũ). Tính mọi gradient ở cùng θ cũ.\n\n### Chuẩn hóa và đơn vị\n\nKhoảng cách và bước tối ưu bị ảnh hưởng bởi thang đo. Standardization dùng mean/SD train. Một số cây không cần chuẩn hóa như KNN/hồi quy gradient, nhưng vẫn cần xử lý schema và missing đúng. Cột hằng có SD=0 cần quy ước tránh chia 0.\n\nz=(x−μtrain)/σtrain. Không fit lại μ/σ trên từng mẫu mới.\n\n### Generalization và overfitting\n\nGiảm lỗi train là cần cho học, nhưng chưa đủ để dùng tốt ngoài train. Train tốt, validation kém gợi ý cần xem độ phức tạp, dữ liệu, rò rỉ, lệch phân phối và cách chia. Không có một nút chữa tất cả.\n\nHãy đặt cạnh nhau: train metric, validation metric, baseline và số mẫu.\n\n### Gradient và kiểm tra số\n\nGradient là đạo hàm theo từng tham số. Chain rule nối đạo hàm qua các lớp. Sai phân trung tâm là cách đối chiếu cục bộ hữu ích, không thay mọi kiểm tra dữ liệu/quy trình. Cần dùng loss cùng định nghĩa trung bình và cùng tham số.\n\ng số≈[L(θ+εeⱼ)−L(θ−εeⱼ)]/(2ε); bài dùng ε=10⁻⁵.\n\n### Đọc code NumPy\n\nĐọc shape trước giá trị: X(n,d), w(d,), y(n,). @ là nhân ma trận/tích vô hướng, * thường nhân từng phần tử. axis=0 thường giảm qua các hàng, axis=1 qua các cột trong ma trận 2D. Kiểm tra broadcasting khi cộng bias hoặc nhân delta.\n\nX @ w + b → (n,); X.T @ residual → (d,).\n\n### Quan sát không phải bằng chứng nhân quả\n\nHệ số, attention weight hoặc cụm cho thấy cách hệ thống tính trong điều kiện đang xét; không tự chứng minh vì sao thế giới vận hành. Dữ liệu có thể thiếu yếu tố, thiên lệch hoặc khác bối cảnh sử dụng.\n\nPhân biệt: tính toán đúng → đánh giá đúng → phù hợp sử dụng. Ba câu hỏi khác nhau.\n\n### Cách đọc một hình ML\n\nĐọc trục, đơn vị, nguồn dữ liệu và tập đo trước đường cong. Hỏi điểm đang là sample, tham số hay score; màu là nhãn thật hay nhãn dự đoán; ảnh là minh họa hay kết quả tính. Đổi một yếu tố và viết dự đoán trước khi chạy.\n\nĐoán → chạy một bước → đọc số → giải thích → thử phản ví dụ.\n\n## Bản đồ 30 ngày\n\n### Ngày 1: AI là gì và em sẽ học điều gì?\n\n**Câu hỏi:** Từ vài căn nhà đã biết giá, máy đoán giá nhà mới như thế nào?\n\n**Bản chất:** Mỗi dòng là một mẫu. X là thông tin có trước lúc dự đoán; y là điều muốn đoán. Học là điều chỉnh tham số để dự đoán từ X gần y trên train. Quy tắc do người viết và tham số học từ dữ liệu là hai cách xây hệ thống khác nhau.\n\n**Tính tay:** Nhà 40 m² giá 1,5 tỷ; 80 m² giá 2,7 tỷ. Đường ŷ=0,03x+0,3 dự đoán nhà 60 m² là 2,1 tỷ. Đây là ví dụ tổng hợp.\n\n**Thử trên web/notebook:** Mở dự án giá nhà trước. Đổi diện tích, tự đoán rồi xem kết quả. Sau đó phân loại ba nhiệm vụ trong bài B: dự đoán số, dự đoán nhãn, tạo nội dung.\n\n**Tự kiểm tra:** Em nêu được X, y và thông tin nào chưa có khi cần dự đoán. Bài B: regression, classification, generation.\n\n**Dễ nhầm:** Dự đoán giá liên tục dùng linear regression làm khởi đầu; logistic regression dự đoán xác suất phân loại, không xuất giá liên tục.\n\n**Bài A:** Chọn 3 ứng dụng và ghi rõ đầu vào, đầu ra, quy tắc hay phần được học từ dữ liệu.\n\n**Bài B:** Gán ba nhiệm vụ dưới đây vào regression, classification hoặc generation.\n\n**Bài C (tùy chọn):** Vẽ bản đồ AI và thêm một ví dụ tìm đường không cần học dữ liệu.\n\n**Gợi ý B:** Nhìn vào kiểu đầu ra, không dựa vào tên ứng dụng.\n\nMở bài ngày 1 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = ['regression', 'classification', 'generation']\n```\n\n### Ngày 2: Dùng Python để quan sát dữ liệu\n\n**Câu hỏi:** Dữ liệu thiếu hoặc sai có làm máy học sai không?\n\n**Bản chất:** Bảng dữ liệu là hợp đồng đầu vào: kiểu cột, đơn vị, miền giá trị, ý nghĩa mỗi hàng. Thiếu dữ liệu không đồng nghĩa bằng 0. Kiểm tra trước khi vẽ hoặc huấn luyện.\n\n**Tính tay:** scores=[50, NaN, 80, 60]. Lọc giá trị hữu hạn và ≥60 thu được [80,60]. Điều kiện phải kết hợp đúng trên từng phần tử.\n\n**Thử trên web/notebook:** Thử giữ NaN, thay bằng 0 và lọc bỏ; so trung bình. Với dữ liệu nhà, kiểm tra tuổi nhà âm, khoảng cách âm hoặc giá sai đơn vị.\n\n**Tự kiểm tra:** Em giải thích được np.isfinite, mask boolean và vì sao phải kiểm tra số mẫu sau khi lọc.\n\n**Dễ nhầm:** Không xóa mọi hàng thiếu một cách máy móc; phải ghi số hàng mất và cân nhắc việc lọc có làm lệch nhóm dữ liệu.\n\n**Bài A:** Tìm một giá trị thiếu, một giá trị lớn và mô tả bảng trước khi tính trung bình.\n\n**Bài B:** Lọc các điểm hữu hạn và từ 60 trở lên trong scores. Giữ thứ tự xuất hiện.\n\n**Bài C (tùy chọn):** Lưu bảng thành CSV rồi đọc lại; giải thích khác biệt giữa bỏ dòng thiếu và điền giá trị.\n\n**Gợi ý B:** Kết hợp np.isfinite với một điều kiện so sánh bằng toán tử &.\n\nMở bài ngày 2 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = scores[np.isfinite(scores) & (scores >= 60)]\n```\n\n### Ngày 3: Toán cần dùng: vector và ma trận\n\n**Câu hỏi:** Một dòng dữ liệu biến thành một dự đoán bằng phép toán nào?\n\n**Bản chất:** Mỗi hàng của X là một đối tượng, mỗi cột là một đặc trưng. Nếu X có kích thước n×d, nhân với w dài d sẽ cho n dự đoán. Với đồ thị, X vẫn tổ chức theo kiểu đó, còn ma trận kề A có kích thước n×n vì cả hàng và cột đều chỉ nút.\n\n**Tính tay:** x=[80,3], w=[0,03;0,2], b=0,5 cho ŷ=80×0,03+3×0,2+0,5=3,5. Đổi thứ tự cột mà giữ w sẽ đổi ý nghĩa.\n\n**Thử trên web/notebook:** Tính tay một hàng rồi chạy X @ w + b. Đọc shape của mọi ma trận, không chỉ nhìn giá trị.\n\n**Tự kiểm tra:** Em kiểm tra được chiều nhân ma trận và chỉ ra đóng góp của từng đặc trưng.\n\n**Dễ nhầm:** Broadcasting có thể chạy mà cho sai ý nghĩa. Ghi shape mong đợi trước khi dùng NumPy.\n\n**Bài A:** Ghi shape của X, w và y; tính dự đoán của hàng đầu bằng tay.\n\n**Bài B:** Tính Xw + b cho cả ba hàng, không dùng vòng lặp.\n\n**Bài C (tùy chọn):** Viết cách dùng vòng lặp và đối chiếu; làm sai một shape để đọc thông báo lỗi.\n\n**Gợi ý B:** Nhân ma trận @ rồi cộng một hệ số chặn cho mỗi hàng.\n\nMở bài ngày 3 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = X @ w + b\n```\n\n### Ngày 4: Dữ liệu có biến động và bất định\n\n**Câu hỏi:** Một con số trung bình có kể hết câu chuyện không?\n\n**Bản chất:** Xác suất mô tả mô hình của phép thử, còn tần suất là số quan sát trong mẫu chia cho số lần thử. Đồng xu công bằng có xác suất mặt ngửa 0,5. Nếu 20 lần tung cho 12 mặt ngửa thì tần suất của mẫu là 0,6. Mean và median trả lời một câu hỏi khác: dữ liệu tập trung quanh đâu, và tâm đó nhạy với ngoại lệ đến mức nào.\n\n**Tính tay:** [1,2,3,4,100] có mean=22, median=3. Căn nhà cực đắt kéo mean lên; không có nghĩa căn điển hình giá 22.\n\n**Thử trên web/notebook:** Thêm một ngoại lệ vào dữ liệu, xem histogram và mean/median trước–sau. Viết lý do có giữ ngoại lệ hay không.\n\n**Tự kiểm tra:** Em mô tả được trung tâm, độ phân tán, ngoại lệ và đơn vị.\n\n**Dễ nhầm:** Không xóa ngoại lệ chỉ vì mô hình dự đoán kém; kiểm tra đó là lỗi nhập hay trường hợp thật.\n\n**Bài A:** Dự đoán mean và median thay đổi thế nào khi thêm giá trị 100.\n\n**Bài B:** Trả về [mean, median] cho values, rồi giải thích đại lượng nào nhạy với ngoại lệ hơn.\n\n**Bài C (tùy chọn):** Mô phỏng đồng xu với 5 seed và so tỷ lệ mặt ngửa, không chỉ xem một lần chạy.\n\n**Gợi ý B:** Mean dùng tổng chia số lượng; median là giá trị giữa sau khi sắp xếp.\n\nMở bài ngày 4 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = [np.mean(values), np.median(values)]\n```\n\n### Ngày 5: Tại sao mô hình biết phải thay đổi theo hướng nào?\n\n**Câu hỏi:** Máy biết nên thay trọng số theo hướng nào?\n\n**Bản chất:** Loss đo độ sai. Gradient chỉ hướng tăng loss nhanh nhất tại điểm hiện tại; gradient descent đi ngược hướng đó. Learning rate quyết định độ dài bước, không phải trọng số học được.\n\n**Tính tay:** L(w)=(w−3)²; dL/dw=2(w−3). w=0, α=0,1 → w mới=0−0,1×(−6)=0,6; loss từ 9 xuống 5,76.\n\n**Thử trên web/notebook:** Tính một bước trước khi bấm tiến. Đổi α từ nhỏ sang lớn; quan sát khi nào bước đi vượt qua vùng tốt.\n\n**Tự kiểm tra:** Em nói được vì sao trừ gradient và phân biệt tham số với siêu tham số.\n\n**Dễ nhầm:** Loss không nhất thiết giảm với mọi α; gradient đúng vẫn có thể đi quá xa.\n\n**Bài A:** Tính gradient tại w=0 và dự đoán hướng đi trước khi chạy.\n\n**Bài B:** Thực hiện một bước cho L(w)=(w−3)² từ w=0 với alpha=0.1.\n\n**Bài C (tùy chọn):** So alpha=0.1 và 1.1 qua 10 bước, giải thích một đường phân kỳ.\n\n**Gợi ý B:** Đạo hàm là 2(w−3); cập nhật trừ alpha nhân gradient.\n\nMở bài ngày 5 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = w - alpha * 2 * (w - 3)\n```\n\n### Ngày 6: Hồi quy tuyến tính một biến\n\n**Câu hỏi:** Một đường thẳng học quan hệ diện tích–giá ra sao?\n\n**Bản chất:** Hồi quy đơn biến dùng ŷ=wx+b. MSE=(1/N)Σ(ŷ−y)². Đường thẳng và các đoạn sai số phải lấy từ cùng w,b. Hệ số w là độ thay đổi dự đoán khi x tăng một đơn vị.\n\n**Tính tay:** w=0,03 tỷ/m², b=0,3 tỷ. x=60 cho ŷ=2,1 tỷ; nếu y=2,4 tỷ, residual ŷ−y=−0,3 và squared error=0,09 tỷ².\n\n**Thử trên web/notebook:** Trong mô phỏng sâu, dừng ở dự đoán, loss, gradient và update. Chọn một nhà, giải thích từng số thay vì chỉ xem đường chuyển động.\n\n**Tự kiểm tra:** Em tự tính được dự đoán, residual, MSE và đơn vị của chúng.\n\n**Dễ nhầm:** Bias là giá trị chặn của mô hình; không nhất thiết có ý nghĩa thị trường ở diện tích 0 ngoài miền dữ liệu.\n\n**Bài A:** Mở phòng hồi quy, đổi b và w riêng rẽ; ghi dự đoán trước khi bấm từng bước.\n\n**Bài B:** Với x=3, y=45, b=20, w=7.5, trả về [dự đoán, sai số có dấu, bình phương sai số].\n\n**Bài C (tùy chọn):** Thêm một ngoại lệ, huấn luyện lại và giải thích tác động của bình phương sai số.\n\n**Gợi ý B:** Dùng e = dự đoán − thực tế; đừng bỏ dấu của e.\n\nMở bài ngày 6 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\npred = b0 + w0*x0\nanswer = [pred, pred-y0, (pred-y0)**2]\n```\n\n### Ngày 7: Mốc 1: mô hình đầu tiên của em\n\n**Câu hỏi:** Em có thực sự hiểu một bước huấn luyện không?\n\n**Bản chất:** Với MSE: ∂L/∂b=2 mean(residual), ∂L/∂w=2 mean(residual×x). Tính cả hai từ tham số cũ rồi cập nhật đồng thời.\n\n**Tính tay:** θ=2, gradient=3, α=0,1 → θ mới=1,7. Nếu cộng gradient thành 2,3, đó là đi theo hướng tăng tại điểm hiện tại.\n\n**Thử trên web/notebook:** Làm mốc 7 trước khi xem giải thích. Trong notebook điền công thức cập nhật; thử cố ý đổi dấu rồi đối chiếu loss.\n\n**Tự kiểm tra:** Đạt 6/8 câu và giải thích một gradient bằng lời; không chỉ thuộc đáp án.\n\n**Dễ nhầm:** Mốc trắc nghiệm đạt không chứng minh đã biết viết code. Nếu vẫn chưa giải thích được sai số, quay ngày 3/5/6.\n\n**Bài A:** So sánh loss khi cộng và khi trừ gradient từ cùng một theta ban đầu.\n\n**Bài B:** Viết bước cập nhật toàn bộ theta bằng gradient của tập train trong ví dụ.\n\n**Bài C (tùy chọn):** Che mã mẫu, tự viết lại hàm predict và giải thích từng biến cho thầy.\n\n**Gợi ý B:** Gradient dùng tất cả các mẫu train; cập nhật đồng thời từ theta cũ.\n\nMở bài ngày 7 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = theta - alpha * (2/len(tr) * Z[tr].T @ (Z[tr]@theta-y[tr]))\n```\n\n### Ngày 8: Hồi quy nhiều biến và chuẩn hóa\n\n**Câu hỏi:** Khi giá còn phụ thuộc nhiều yếu tố thì đường thẳng trở thành gì?\n\n**Bản chất:** Hồi quy đa biến cộng các đóng góp: ŷ=b+Σwⱼxⱼ. Hai đầu vào tạo mặt phẳng. Chuẩn hóa z=(x−μtrain)/σtrain giúp các đặc trưng có thang đo gần nhau.\n\n**Tính tay:** Nếu model học trên z: w gốc=θⱼ/σⱼ; b gốc=θ₀−Σw gốcⱼ μⱼ. Hai cách phải cho cùng dự đoán.\n\n**Thử trên web/notebook:** Xoay mặt phẳng 3D, chọn một mẫu; so dự đoán trên dữ liệu chuẩn hóa và đơn vị gốc. Chỉ fit scaler trên train.\n\n**Tự kiểm tra:** Em kiểm tra được hai cách dự đoán khớp, biết μ/σ đến từ đâu.\n\n**Dễ nhầm:** Hệ số không chứng minh nhân quả. Đặc trưng tương quan nhau có thể làm hệ số khó diễn giải ổn định.\n\n**Bài A:** Giữ một biến cố định và quan sát đường lát cắt trên mặt phẳng dự đoán.\n\n**Bài B:** Đổi theta=[10,6,−4], mu=[3,2], sd=[2,4] về hệ số gốc [b,w1,w2].\n\n**Bài C (tùy chọn):** Tạo hai cột tương quan mạnh và xem hệ số thay đổi dù dự đoán có thể gần nhau.\n\n**Gợi ý B:** w gốc = theta/sd; b gốc = theta0 − tổng(w gốc × mu).\n\nMở bài ngày 8 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nraw_w = theta[1:] / sd\nanswer = np.r_[theta[0] - raw_w @ mu, raw_w]\n```\n\n### Ngày 9: Một lần cập nhật dùng bao nhiêu dữ liệu?\n\n**Câu hỏi:** Mỗi bước update có cần đọc hết dữ liệu không?\n\n**Bản chất:** Batch dùng toàn train; SGD dùng một mẫu; mini-batch dùng một nhóm. Gradient ít mẫu nhiễu hơn nhưng mỗi bước rẻ hơn. Epoch là một lượt qua train, khác số update.\n\n**Tính tay:** Một mẫu z cho gradient MSE 2(z·θ−y)z. Một epoch với N mẫu và batch size B thường có ceil(N/B) update.\n\n**Thử trên web/notebook:** Giữ cùng dữ liệu/khởi tạo, so các chế độ theo số lượt đọc mẫu và loss. Đừng chỉ so số lần bấm.\n\n**Tự kiểm tra:** Em phân biệt epoch, batch size, update và mô tả vì sao đường SGD dao động.\n\n**Dễ nhầm:** Dao động không tự có nghĩa thuật toán sai; so trên cùng ngân sách và metric phù hợp.\n\n**Bài A:** Quan sát đường MSE với alpha khác nhau và dự đoán cấu hình nào đi chậm.\n\n**Bài B:** Một mẫu z=[1,2], y=5, theta=[0,0], alpha=0.1: tính theta mới theo SGD và MSE.\n\n**Bài C (tùy chọn):** So batch và mini-batch với ngân sách đọc mẫu gần nhau; ghi rõ cách so sánh.\n\n**Gợi ý B:** Một mẫu có gradient 2e×z; không chia thêm cho số mẫu của tập đầy đủ.\n\nMở bài ngày 9 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = theta - alpha * 2 * (z @ theta - target) * z\n```\n\n### Ngày 10: Đánh giá một mô hình có đáng tin không?\n\n**Câu hỏi:** Mô hình sai bao nhiêu thì được coi là hữu ích?\n\n**Bản chất:** MAE=mean|error| cùng đơn vị y; RMSE=√MSE cũng cùng đơn vị; R² so với biến thiên y trên tập đang đánh giá và có thể âm. So với baseline trước khi khen mô hình.\n\n**Tính tay:** y=[1,3], ŷ=[2,2]: MAE=1, MSE=1, R²=0. Một baseline hằng dễ hiểu là mean train; median train là hằng tối ưu cho MAE trên train.\n\n**Thử trên web/notebook:** Tính metric tay trên vài mẫu, rồi xem train/validation. Viết sai số này có chấp nhận được cho mục đích sử dụng không.\n\n**Tự kiểm tra:** Em báo cáo metric kèm đơn vị, tập đo và baseline.\n\n**Dễ nhầm:** Không diễn giải MSE như tiền sai trung bình, vì đơn vị đã bình phương.\n\n**Bài A:** So baseline trung bình với mô hình; giải thích từng phần train/validation/test.\n\n**Bài B:** Tính [MAE,MSE,R²] cho truth và pred dưới đây.\n\n**Bài C (tùy chọn):** Thêm một ngoại lệ vào dự đoán; giải thích chỉ số nào biến động mạnh.\n\n**Gợi ý B:** R² dùng tổng bình phương sai số và độ biến động quanh trung bình của truth.\n\nMở bài ngày 10 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nerr = pred-truth\nanswer = [np.mean(np.abs(err)),np.mean(err**2),1-np.sum(err**2)/np.sum((truth-truth.mean())**2)]\n```\n\n### Ngày 11: Overfitting và regularization\n\n**Câu hỏi:** Tại sao model khớp train hơn lại có thể đoán dữ liệu mới kém?\n\n**Bản chất:** Model quá linh hoạt có thể học nhiễu. Tăng độ phức tạp thường giảm train loss nhưng validation có thể tăng. Chọn cấu hình bằng validation, giữ test cho cuối.\n\n**Tính tay:** Nếu val loss của bậc [1,2,5] là [0,5;0,2;0,7], chọn bậc 2. Không chọn bậc 5 chỉ vì train loss thấp.\n\n**Thử trên web/notebook:** Thay bậc đa thức và số mẫu; quan sát đường dự đoán ngoài vùng train. Ghi một cấu hình underfit và một cấu hình overfit.\n\n**Tự kiểm tra:** Em chọn được cấu hình bằng validation và mô tả khoảng cách train–validation.\n\n**Dễ nhầm:** Chọn quá nhiều lần trên cùng validation cũng có thể làm lựa chọn bám vào validation; ghi số thí nghiệm và giới hạn.\n\n**Bài A:** Nhìn hai đường train/validation khi tăng độ phức tạp; dự đoán nơi quá khớp.\n\n**Bài B:** Chọn bậc đa thức theo val_loss, không theo train_loss. Trả về số bậc.\n\n**Bài C (tùy chọn):** Thay kích thước tập train hoặc L2, chỉ đổi một yếu tố mỗi lượt.\n\n**Gợi ý B:** Dữ liệu validation đại diện cho dữ liệu không dùng để fit hệ số.\n\nMở bài ngày 11 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = int(degrees[np.argmin(val_loss)])\n```\n\n### Ngày 12: Hồi quy logistic cho phân loại\n\n**Câu hỏi:** Làm sao chuyển một tổng có trọng số thành xác suất lớp?\n\n**Bản chất:** Logistic regression: s=w·x+b; p=1/(1+exp(−s)). BCE=−mean[y log p+(1−y)log(1−p)]. Ngưỡng biến p thành nhãn.\n\n**Tính tay:** s=0 → p=0,5. p=0,8, y=1 → BCE≈0,2231. p=0,55 với ngưỡng 0,6 cho nhãn 0.\n\n**Thử trên web/notebook:** Đổi ngưỡng nhưng giữ w,b; xác nhận vùng nhãn thay đổi còn p/BCE không đổi. Xem gradient và update thật trong mô phỏng sâu.\n\n**Tự kiểm tra:** Em phân biệt logit, xác suất, nhãn và ngưỡng.\n\n**Dễ nhầm:** Tên có regression nhưng ứng dụng điển hình là phân loại; không dùng để xuất giá nhà liên tục.\n\n**Bài A:** Thay logit và ngưỡng, phân biệt xác suất với nhãn dự đoán.\n\n**Bài B:** Trả về [sigmoid(0), BCE cho y=1,p=0.8, nhãn của p=0.55 ở ngưỡng 0.6].\n\n**Bài C (tùy chọn):** Giữ mô hình, đổi ngưỡng trên validation; giải thích sự thay đổi precision/recall.\n\n**Gợi ý B:** BCE cho nhãn 1 là −log(p); nhãn chỉ được tạo sau bước so với ngưỡng.\n\nMở bài ngày 12 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = [sigmoid(0), -np.log(.8), int(.55 >= .6)]\n```\n\n### Ngày 13: KNN: học từ các điểm gần nhau\n\n**Câu hỏi:** Nếu nhà mới giống những nhà đã biết, có thể dự đoán bằng láng giềng không?\n\n**Bản chất:** KNN đo khoảng cách, sắp xếp, chọn k rồi bỏ phiếu khi phân loại. KNN lưu mẫu thay vì học trọng số qua giảm loss như hồi quy.\n\n**Tính tay:** Ba láng giềng nhãn [1,0,1] → lớp 1 thắng. Một cột nhân 100 có thể thống trị khoảng cách nếu không chuẩn hóa.\n\n**Thử trên web/notebook:** Thử k=1/3/5, đổi đơn vị một trục ×100 rồi bật scaler fit từ train. Theo dõi từng khoảng cách và phiếu.\n\n**Tự kiểm tra:** Em tính được một khoảng cách và giải thích vì sao đổi đơn vị có thể đổi dự đoán.\n\n**Dễ nhầm:** Không đưa mẫu truy vấn vào fit scaler. k nhỏ nhạy nhiễu; k lớn có thể làm mờ cấu trúc.\n\n**Bài A:** Vẽ một điểm truy vấn, tìm 1 và 3 láng giềng gần nhất bằng tay.\n\n**Bài B:** Với X=[0,1,2], nhãn [0,0,1], dự đoán cho 1.8 ở k=1 và k=3.\n\n**Bài C (tùy chọn):** Nhân một cột lên 100 lần; so trước/sau chuẩn hóa chỉ fit từ train.\n\n**Gợi ý B:** k=1 lấy nhãn gần nhất; k=3 bỏ phiếu cả ba điểm.\n\nMở bài ngày 13 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = [knn_predict(X,y,q,k=1)[0],knn_predict(X,y,q,k=3)[0]]\n```\n\n### Ngày 14: Accuracy có thể đánh lừa như thế nào?\n\n**Câu hỏi:** Accuracy cao có luôn tìm đúng nhóm em quan tâm không?\n\n**Bản chất:** Confusion matrix đếm TP/FP/FN/TN. Precision=TP/(TP+FP); recall=TP/(TP+FN); F1 là trung bình điều hòa của precision/recall. Phải chỉ rõ lớp dương.\n\n**Tính tay:** TP=3, FP=1, FN=2 → precision=0,75; recall=0,6; F1≈0,6667. Luôn đoán lớp đa số có thể accuracy cao nhưng recall lớp hiếm bằng 0.\n\n**Thử trên web/notebook:** Thay ngưỡng và xem confusion matrix. Chọn loại lỗi quan trọng theo bài toán rồi giải thích metric ưu tiên.\n\n**Tự kiểm tra:** Em tính được precision/recall và nêu ví dụ accuracy gây hiểu nhầm.\n\n**Dễ nhầm:** Không dùng accuracy đơn lẻ cho dữ liệu lệch lớp; macro-F1 và F1 lớp dương không phải một khái niệm.\n\n**Bài A:** Từ TP,FP,FN,TN, viết một câu diễn giải mỗi loại sai lầm trong bối cảnh cụ thể.\n\n**Bài B:** Tính [precision,recall,F1] cho TP=8,FP=2,FN=4,TN=6.\n\n**Bài C (tùy chọn):** Tạo dữ liệu lệch lớp và so accuracy với baseline luôn chọn lớp phổ biến.\n\n**Gợi ý B:** Precision hỏi các dự đoán dương đúng bao nhiêu; recall hỏi các mẫu dương được tìm ra bao nhiêu.\n\nMở bài ngày 14 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nprecision=tp/(tp+fp);recall=tp/(tp+fn)\nanswer=[precision,recall,2*precision*recall/(precision+recall)]\n```\n\n### Ngày 15: Cây quyết định và cách mô hình đặt câu hỏi\n\n**Câu hỏi:** Cây quyết định chọn câu hỏi phân nhánh bằng cách nào?\n\n**Bản chất:** CART thử đặc trưng/ngưỡng, tính weighted Gini và chọn gain lớn nhất trong các phép chia hợp lệ. Gini=1−Σpₖ². Điều kiện dừng ngăn chia mãi.\n\n**Tính tay:** Nút 2 mẫu lớp 0, 2 mẫu lớp 1 có Gini=0,5. Hai lá thuần có weighted Gini=0, gain=0,5.\n\n**Thử trên web/notebook:** Xem từng ngưỡng, số mẫu con và cây lớn lên. Đổi max depth/min samples leaf; đưa mẫu mới đi qua đúng cây đang có.\n\n**Tự kiểm tra:** Em phân biệt Gini cha, weighted Gini con và gain.\n\n**Dễ nhầm:** Tính trung bình Gini hai nhánh chỉ đúng khi hai nhánh bằng số mẫu. Cây sâu dễ overfit; mô phỏng hiện chưa có pruning.\n\n**Bài A:** Vẽ cây độ sâu 1, đi theo một mẫu và giải thích câu hỏi ở nút gốc.\n\n**Bài B:** Tính mức giảm Gini khi [0,0,1,1] được tách thành [0,0] và [1,1].\n\n**Bài C (tùy chọn):** So cây độ sâu 1,2,4 trên cùng validation; không chọn theo train accuracy.\n\n**Gợi ý B:** Hai lá thuần nhất có Gini bằng 0; cần trừ Gini sau chia có trọng số.\n\nMở bài ngày 15 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = gini(parent) - .5*gini(left) - .5*gini(right)\n```\n\n### Ngày 16: Mốc 2: tự tổ chức một thí nghiệm ML\n\n**Câu hỏi:** Em có tổ chức được một thí nghiệm không rò rỉ dữ liệu không?\n\n**Bản chất:** Quy trình: xác định mục tiêu → chia dữ liệu → fit tiền xử lý/model trên train → chọn trên validation → đánh giá test cuối. Ghi cấu hình và metric để so công bằng.\n\n**Tính tay:** Train [1,2,3] có μ=2, σ=√(2/3). Giá trị mới 100 có z=(100−2)/σ; không đưa 100 vào fit μ/σ.\n\n**Thử trên web/notebook:** Làm mốc 16, lập bảng baseline/A/B trên cùng validation. Chỉ mở test sau khi đã chọn cấu hình.\n\n**Tự kiểm tra:** Đạt 6/8 và chỉ ra nơi fit scaler trong code.\n\n**Dễ nhầm:** Đừng thử nhiều model trên test rồi gọi kết quả cao nhất là đánh giá cuối độc lập.\n\n**Bài A:** Tìm lỗi trong quy trình chuẩn hóa trước rồi mới chia train/test.\n\n**Bài B:** Chỉ fit chuẩn hóa từ train=[1,2,3]. Trả về [mu,sd,z] cho một giá trị mới 100.\n\n**Bài C (tùy chọn):** Đưa tiền xử lý vào từng fold/pipeline; giải thích vì sao dùng toàn bộ dữ liệu gây leakage.\n\n**Gợi ý B:** Độ lệch chuẩn ở đây dùng ddof=0 giống NumPy mặc định.\n\nMở bài ngày 16 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nmu=train_values.mean();sd=train_values.std()\nanswer=[mu,sd,(new_value-mu)/sd]\n```\n\n### Ngày 17: K-means và học không có nhãn\n\n**Câu hỏi:** Không có nhãn, máy có thể gom điểm thành nhóm như thế nào?\n\n**Bản chất:** K-means luân phiên gán mỗi điểm vào tâm gần nhất rồi dời tâm về trung bình điểm trong cụm. Inertia là tổng bình phương khoảng cách tới tâm được gán.\n\n**Tính tay:** Một cụm gồm 0,2,4 thì tâm mới=2. Khởi tạo khác nhau có thể dẫn tới nghiệm khác nhau.\n\n**Thử trên web/notebook:** Xem riêng bước gán và bước dời tâm. Đổi k/khởi tạo, ghi inertia và kiểm tra cụm rỗng được xử lý ra sao.\n\n**Tự kiểm tra:** Em giải thích được một lần tâm dịch chuyển từ các điểm thành viên.\n\n**Dễ nhầm:** Cụm không tự có tên/ý nghĩa kinh doanh; cần diễn giải và kiểm tra độ ổn định. Nhãn cụm 0/1 có thể đổi tên giữa hai lần chạy.\n\n**Bài A:** Tự gán 4 điểm vào tâm 0 và 10, rồi dự đoán tâm mới.\n\n**Bài B:** Sau một vòng K-means cho [0,2,8,10] với tâm [0,10], trả về hai tâm mới theo thứ tự.\n\n**Bài C (tùy chọn):** Thử ba khởi tạo trên cùng dữ liệu 2D; giải thích vì sao cụm không nhất thiết là nhãn thật.\n\n**Gợi ý B:** Gán theo tâm cũ, rồi lấy trung bình từng nhóm để cập nhật đồng thời.\n\nMở bài ngày 17 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nlabels=np.abs(points[:,None]-old_centers[None,:]).argmin(1)\nanswer=[points[labels==j].mean() for j in range(2)]\n```\n\n### Ngày 18: PCA: nhìn dữ liệu từ một hướng khác\n\n**Câu hỏi:** Làm sao nén nhiều chiều mà giữ nhiều biến thiên nhất?\n\n**Bản chất:** PCA trừ trung bình rồi tìm các trục trực giao có phương sai giảm dần. Chiếu lấy tọa độ mới, tái tạo đưa về không gian cũ. Phương sai cao không đồng nghĩa thông tin tốt nhất cho mọi nhãn.\n\n**Tính tay:** Giữ một trục thường mất thông tin. Giữ đủ hai trục trong ví dụ 2D tái tạo gần đúng dữ liệu gốc, sai số chỉ do số học.\n\n**Thử trên web/notebook:** Đổi đơn vị x₂ ×100 rồi so chuẩn hóa/không chuẩn hóa; thêm ngoại lệ và thử hướng chiếu tự chọn.\n\n**Tự kiểm tra:** Em đọc được explained variance ratio và reconstruction error, nêu hệ tọa độ dùng tính chúng.\n\n**Dễ nhầm:** Chuẩn hóa dùng σ với ddof=0, covariance mẫu dùng n−1 trong bài; hai mẫu số phục vụ hai phép tính khác nhau. Dấu eigenvector có thể đảo mà cùng không gian.\n\n**Bài A:** Xoay hướng chiếu một đám điểm dài; dự đoán hướng giữ nhiều phương sai.\n\n**Bài B:** Với ba điểm cùng đường y=x, tính tỷ lệ phương sai của thành phần PCA đầu tiên.\n\n**Bài C (tùy chọn):** Tạo hai cột khác đơn vị và so PCA trước/sau chuẩn hóa.\n\n**Gợi ý B:** Dữ liệu nằm hoàn toàn trên một đường nên một thành phần giữ toàn bộ phương sai khác 0.\n\nMở bài ngày 18 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = ratio[0]\n```\n\n### Ngày 19: Một mạng nơ-ron tính toán như thế nào?\n\n**Câu hỏi:** Một nút nơ-ron tính gì trước khi cả mạng dự đoán?\n\n**Bản chất:** Neuron trước hết tính z=x·w+b, rồi áp dụng hàm kích hoạt. Với x=[1,3], w=[2,−1] và b=0,5, z=−0,5 và ReLU(z)=0. Phi tuyến giúp nhiều lớp kết hợp thành một ánh xạ có thể biểu diễn những quan hệ mà chuỗi các lớp affine không biểu diễn được.\n\n**Tính tay:** x=[1,−1], w=[0,5;0,3], b=0 → z=0,2. ReLU(z)=0,2; nếu z âm thì ReLU=0. Mô phỏng sâu dùng tanh ở lớp ẩn và sigmoid đầu ra.\n\n**Thử trên web/notebook:** Chọn một mẫu, dừng ở đầu vào/lớp ẩn/đầu ra; tính z,a và logit s trước khi xem số.\n\n**Tự kiểm tra:** Em phân biệt activation lớp ẩn với sigmoid lớp ra và đọc được kích thước mạng.\n\n**Dễ nhầm:** Không gọi mọi giá trị trong nút là xác suất; z và tanh activation có thể âm.\n\n**Bài A:** Vẽ một neuron với x1,x2,b; theo dõi từng tích và tổng trước activation.\n\n**Bài B:** Tính [logit,ReLU(logit)] với x=[1,3], w=[2,−1], b=0.5.\n\n**Bài C (tùy chọn):** So mạng tuyến tính và mạng có phi tuyến trên XOR, giữ nguyên dữ liệu.\n\n**Gợi ý B:** Tính tổng có trọng số trước khi áp dụng ReLU.\n\nMở bài ngày 19 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nlogit=x@w+b\nanswer=[logit,max(0,logit)]\n```\n\n### Ngày 20: Backpropagation: gradient đi ngược ra sao?\n\n**Câu hỏi:** Sai số truyền ngược qua mạng bằng quy tắc nào?\n\n**Bản chất:** Trong lượt forward, w=1 và x=2 cho dự đoán 2, sai lệch −3 so với y=5 và loss bằng 9. Backprop dùng quy tắc dây chuyền để nhân 2(−3) với x=2, thu được dL/dw=−12. Sau khi có gradient, bộ tối ưu mới dùng nó để cập nhật w.\n\n**Tính tay:** p=0,8, y=1, N=4 → δra=−0,05. v=2, a=0,6 → δẩn=−0,064. Mỗi đóng góp đã chia N; không chia lại khi cộng.\n\n**Thử trên web/notebook:** Chọn một cạnh, so gradient giải tích và sai phân trung tâm [L(θ+ε)−L(θ−ε)]/(2ε). Xem toàn bộ gradient trước update đồng thời.\n\n**Tự kiểm tra:** Em giải thích được dấu gradient và khớp một kiểm tra sai phân số.\n\n**Dễ nhầm:** Không cập nhật v trước khi dùng nó để tính δẩn cho cùng lượt. ε quá nhỏ có thể chịu sai số số học.\n\n**Bài A:** Vẽ đường w → wx → wx−y → loss và ghi đạo hàm trên từng cạnh.\n\n**Bài B:** Tính dL/dw cho L=(wx−y)² tại w=1,x=2,y=5.\n\n**Bài C (tùy chọn):** Kiểm tra gradient bằng sai phân số với nhiều epsilon; giải thích sai số làm tròn.\n\n**Gợi ý B:** Chain rule nhân đạo hàm của bình phương với đạo hàm wx theo w.\n\nMở bài ngày 20 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = 2*(w*x-y)*x\n```\n\n### Ngày 21: Mốc 3: xem mạng nơ-ron học biên quyết định\n\n**Câu hỏi:** Mạng học XOR là do hoạt ảnh hay do trọng số thay đổi thật?\n\n**Bản chất:** Quan sát forward → loss → backward → update từ cùng bộ tham số. So lớp ẩn tanh và tuyến tính trên XOR để thấy vai trò phi tuyến.\n\n**Tính tay:** Hợp thành các lớp affine vẫn affine, ranh giới sigmoid vẫn tuyến tính. XOR có hai góc đối nhau cùng lớp nên không thể tách bằng một đường thẳng.\n\n**Thử trên web/notebook:** Làm mốc 21. Giữ seed, dữ liệu, số nút và chỉ đổi activation. Tải trace rồi chạy Mang_no_ron_tung_buoc.ipynb để kiểm chứng.\n\n**Tự kiểm tra:** Đạt 6/8; tự tính một gradient, chỉ ra cạnh đổi sau update và phân biệt accuracy train với khả năng tổng quát hóa.\n\n**Dễ nhầm:** Accuracy 100% trên bốn điểm XOR không chứng minh tốt trên dữ liệu chưa thấy; nhiều nút không luôn tốt hơn.\n\n**Bài A:** Quan sát loss và biên quyết định của mạng nhỏ trên hai nửa vành trăng.\n\n**Bài B:** Tính xác suất forward cho mạng tanh hai nút ẩn được cho, không huấn luyện thêm.\n\n**Bài C (tùy chọn):** Chỉ đổi số nút ẩn hoặc learning rate; so validation và ghi 3 trạng thái học.\n\n**Gợi ý B:** Tính xW+b → tanh → nhân V → sigmoid; chú ý shape.\n\nMở bài ngày 21 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = sigmoid(np.tanh(x0 @ W0 + b0) @ V0).ravel()\n```\n\n### Ngày 22: Từ pixel đến ý tưởng CNN\n\n**Câu hỏi:** Bộ lọc nhìn một vùng ảnh rồi tạo feature map thế nào?\n\n**Bản chất:** Bộ lọc ảnh tính một đầu ra từ một vùng cố định quanh vị trí đang xét. Với cửa sổ 3×3, ta nhân từng giá trị ảnh với phần tử kernel tương ứng rồi cộng. Vùng lân cận của một nút đồ thị do các cạnh quyết định và có thể lớn nhỏ khác nhau, nên GCN cần một cách tổng hợp phù hợp với cấu trúc đó.\n\n**Tính tay:** Kích thước output=floor((H+2P−K)/S)+1. Ảnh 5×5, kernel 3×3, P=0, S=1 → 3×3; S=2 → 2×2.\n\n**Thử trên web/notebook:** Bật/tắt một pixel, đoán cửa sổ nào bị ảnh hưởng. Theo dõi tích, tổng, ReLU, pooling; đổi stride/padding và kiểm chứng JSON bằng notebook.\n\n**Tự kiểm tra:** Em tính được một ô output và nói được thông tin nào mất sau ReLU/pooling.\n\n**Dễ nhầm:** Kernel trong bài được đặt sẵn. Mô phỏng chưa học bộ lọc, chưa phân loại ảnh và không có accuracy CNN.\n\n**Bài A:** Tính một vị trí lọc trung bình 3×3 trên ảnh 5×5 bằng tay.\n\n**Bài B:** Áp bộ lọc trung bình 3×3 kiểu valid cho image; trả về ảnh 3×3.\n\n**Bài C (tùy chọn):** So bộ lọc trung bình với bộ lọc cạnh; giải thích bộ lọc cố định khác bộ lọc CNN học được.\n\n**Gợi ý B:** Valid không thêm padding; mỗi vị trí là tổng của một cửa sổ nhân kernel.\n\nMở bài ngày 22 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = conv_valid(image,kernel3)\n```\n\n### Ngày 23: Biến câu chữ thành đầu vào cho mô hình\n\n**Câu hỏi:** Máy làm toán với một câu tiếng Việt bằng cách nào?\n\n**Bản chất:** Văn bản phải được biến thành token và số. Bag-of-words đếm token theo một vocabulary có thứ tự. Cách token hóa ảnh hưởng đầu vào và từ chưa có trong vocabulary.\n\n**Tính tay:** \"em học AI em\" với vocab [em,học,AI] → [2,1,1] nếu giữ nguyên hoa/thường và tách bằng khoảng trắng.\n\n**Thử trên web/notebook:** Thêm dấu câu, đổi hoa/thường hoặc thứ tự từ; xem vector đếm đổi gì và không đổi gì.\n\n**Tự kiểm tra:** Em mô tả được quy tắc token hóa và hạn chế mất thứ tự của bag-of-words.\n\n**Dễ nhầm:** Tách bằng khoảng trắng không phải giải pháp token hóa tiếng Việt đầy đủ; token không luôn tương ứng một từ theo nghĩa ngôn ngữ.\n\n**Bài A:** Lập vocabulary cho ba câu; thử hai câu đổi thứ tự từ nhưng có cùng số đếm.\n\n**Bài B:** Với vocab=[hoc,ai,hay], tạo vector đếm cho câu “hoc ai ai”.\n\n**Bài C (tùy chọn):** Thêm TF-IDF fit trên train; giải thích vì sao vocabulary/IDF không nên học từ test.\n\n**Gợi ý B:** Đếm theo đúng thứ tự vocabulary, không theo thứ tự từ xuất hiện.\n\nMở bài ngày 23 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = [text.split().count(token) for token in vocab]\n```\n\n### Ngày 24: Embeddings và ý tưởng Word2Vec\n\n**Câu hỏi:** Hai vector gần nhau có nghĩa là hai từ giống nhau không?\n\n**Bản chất:** Embedding biểu diễn một đối tượng bằng vector để mô hình có thể tính quan hệ giữa các đối tượng. Word2Vec học vector của từ từ ngữ cảnh, còn network embedding có thể dùng liên kết giữa các nút. Với hai vector a=[1,0] và b=[1,1], cosine bằng 1/√2 và phản ánh góc giữa chúng.\n\n**Tính tay:** a=[1,0], b=[1,1] có cosine=1/√2≈0,7071; a=[0,0] thì cosine không xác định nếu không có quy ước xử lý.\n\n**Thử trên web/notebook:** Tự đổi một tọa độ và vẽ vị trí vector; so cosine với khoảng cách Euclidean.\n\n**Tự kiểm tra:** Em tính được cosine và phân biệt vector đặt tay với embedding đã học như Word2Vec.\n\n**Dễ nhầm:** Bài minh họa vector chưa huấn luyện Word2Vec thật; gần trên hình đặt tay không chứng minh ngữ nghĩa ngôn ngữ.\n\n**Bài A:** Vẽ hai vector và dự đoán cosine lớn hay nhỏ trước khi tính.\n\n**Bài B:** Tính cosine giữa a=[1,0] và b=[1,1].\n\n**Bài C (tùy chọn):** Dùng bảng đồng xuất hiện nhỏ để so từ gần ngữ cảnh; phân biệt vector minh họa với embedding đã học.\n\n**Gợi ý B:** Cosine chuẩn hóa dot product bằng tích độ dài; không phải khoảng cách Euclidean.\n\nMở bài ngày 24 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = (a @ b) / (np.linalg.norm(a)*np.linalg.norm(b))\n```\n\n### Ngày 25: Attention và Transformer ở mức trực giác\n\n**Câu hỏi:** Attention tổng hợp thông tin từ các token khác ra sao?\n\n**Bản chất:** Attention chấm điểm từng ứng viên, chuẩn hóa các điểm hợp lệ bằng softmax rồi lấy tổng có trọng số của các vector giá trị. Bài này dùng điểm q·k/√dₖ cho token. Trong GAT, tập ứng viên là hàng xóm theo đồ thị và hàm chấm điểm có thể dùng tham số học được riêng.\n\n**Tính tay:** Với query đầu và causal mask, chỉ key đầu được phép nên weights=[1,0,0,0], output=V đầu. Temperature thêm vào để thí nghiệm; T=1 là công thức chuẩn ở đây.\n\n**Thử trên web/notebook:** Chọn query, tính một dot product rồi bật mask. Đổi temperature hoặc vector AI, kiểm chứng toàn bộ ma trận trong CNN_va_Attention_tung_buoc.ipynb.\n\n**Tự kiểm tra:** Em chỉ ra trục query/key, tính được tổng có trọng số và giải thích stable softmax trừ max hàng.\n\n**Dễ nhầm:** Đây là một head với W đặt tay, chưa train Transformer. Attention weight cao không tự là bằng chứng nhân quả hoặc hiểu ngôn ngữ.\n\n**Bài A:** Đoán token nào nhận trọng số lớn khi query gần key của nó.\n\n**Bài B:** Tính attention weights cho query q và K, chia sqrt(d_k) rồi softmax.\n\n**Bài C (tùy chọn):** Tính vector tổng có trọng số weights@V; thay query và giải thích heatmap.\n\n**Gợi ý B:** Softmax tạo các trọng số dương có tổng bằng 1; bài này chỉ là một head nhỏ.\n\nMở bài ngày 25 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = softmax(q @ K.T / np.sqrt(K.shape[1]))\n```\n\n### Ngày 26: Mô hình ngôn ngữ, truy xuất và kiểm chứng\n\n**Câu hỏi:** Một câu trả lời có tài liệu đi kèm đã chắc đúng chưa?\n\n**Bản chất:** Retrieval tìm đoạn liên quan; generation tạo câu. RAG đưa đoạn truy xuất vào ngữ cảnh cho bộ sinh nhưng vẫn cần kiểm tra câu trả lời có được nguồn hỗ trợ hay không.\n\n**Tính tay:** Nếu scores=[0,2;0,8;0,3], argmax chọn tài liệu chỉ số 1. Điểm cao nhất chỉ nói tương đối theo bộ chấm hiện tại, không bảo đảm nguồn đúng.\n\n**Thử trên web/notebook:** Đặt câu có/không có bằng chứng trong kho. Ghi đoạn nguồn hỗ trợ từng khẳng định và chấp nhận trả lời chưa đủ dữ liệu.\n\n**Tự kiểm tra:** Em phân biệt truy xuất, tạo sinh, trích nguồn và xác minh nội dung.\n\n**Dễ nhầm:** Bài hiện minh họa truy xuất có kiểm soát; chưa chạy LLM đầy đủ. Văn bản trôi chảy và có citation vẫn có thể suy diễn sai.\n\n**Bài A:** Đọc một câu trả lời và chỉ ra câu nào có đoạn bằng chứng hỗ trợ, câu nào cần kiểm chứng.\n\n**Bài B:** Truy xuất đoạn có nhiều từ truy vấn trùng nhất; trả về chỉ số bắt đầu từ 0.\n\n**Bài C (tùy chọn):** Thiết kế bảng 5 câu hỏi để so câu trả lời có/không có ngữ cảnh; chỉ gọi là RAG khi có cả truy xuất và bước tạo câu trả lời.\n\n**Gợi ý B:** Dùng chỉ số của score lớn nhất; bài không yêu cầu gọi API.\n\nMở bài ngày 26 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = int(np.argmax(scores))\n```\n\n### Ngày 27: Học tăng cường và đánh đổi khám phá/khai thác\n\n**Câu hỏi:** Khi chưa biết lựa chọn nào tốt, nên thử hay dùng điều đã biết?\n\n**Bản chất:** Bandit cân bằng exploration/exploitation. ε-greedy chọn ngẫu nhiên với xác suất ε, còn lại chọn Q cao nhất. Q là ước lượng reward, không phải reward chắc chắn.\n\n**Tính tay:** Q cũ=0,5, count cũ=3, reward mới=1 → Q mới=0,5+(1−0,5)/4=0,625. Count mới bằng 4.\n\n**Thử trên web/notebook:** So ε=0 và ε>0 qua nhiều seed; đọc đường reward trung bình và số lần thử mỗi tay, không chỉ xem lần chạy đẹp nhất.\n\n**Tự kiểm tra:** Em tính được update trung bình tăng dần và giải thích việc thăm dò ban đầu.\n\n**Dễ nhầm:** Bandit đơn giản chưa phải toàn bộ reinforcement learning; ví dụ này chưa có chuỗi trạng thái và tác động dài hạn.\n\n**Bài A:** Giải thích một hành động khám phá dù phần thưởng ước lượng đang thấp hơn.\n\n**Bài B:** Q cũ=0.4 sau 4 lượt, reward mới=1: cập nhật bằng trung bình tăng dần.\n\n**Bài C (tùy chọn):** So epsilon=0 và 0.1 trên nhiều seed, báo cả biến động thay vì một đường đẹp.\n\n**Gợi ý B:** Mẫu thưởng mới là lượt thứ 5; không chia cho số lượt cũ.\n\nMở bài ngày 27 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = old_Q + (reward-old_Q)/(old_count+1)\n```\n\n### Ngày 28: Dự án cuối, buổi 1: đặt đúng câu hỏi\n\n**Câu hỏi:** Dự án riêng của em trả lời câu hỏi gì, cho ai?\n\n**Bản chất:** Viết project brief: người dùng, dự đoán cần làm, X có lúc nào, y lấy từ đâu, metric, baseline và cách chia dữ liệu. Giới hạn bài toán đủ nhỏ để hoàn thành.\n\n**Tính tay:** Dự án mẫu cuối dùng Iris 150 mẫu, phân tầng 90/30/30. Dự án giá nhà thực dùng tuổi nhà, khoảng cách MRT, số cửa hàng; không tự tạo cột diện tích không tồn tại.\n\n**Thử trên web/notebook:** Mở rubric trước khi code. Viết ít nhất một tiêu chí thành công, nguồn dữ liệu và lý do chia tập. Chọn dự án giá nhà hoặc Iris để hoàn tất một vòng.\n\n**Tự kiểm tra:** Có brief, schema, split không giao nhau, baseline chỉ fit train và nhật ký quyết định.\n\n**Dễ nhầm:** Dữ liệu theo thời gian/nhóm có thể cần chia theo thời gian/nhóm; random split không tự phù hợp mọi trường hợp.\n\n**Bài A:** Viết project brief: bài toán, 4 đặc trưng, 3 lớp, baseline và chỉ số chính.\n\n**Bài B:** Tạo ba phần Iris có phân tầng theo iris_split; trả về số mẫu [train,validation,test].\n\n**Bài C (tùy chọn):** Chốt seed và lưu chỉ số mẫu của mỗi phần; ghi rõ nếu test đã được xem trong thử nghiệm trước.\n\n**Gợi ý B:** Mỗi lớp có 30 train, 10 validation và 10 test; test được để riêng.\n\nMở bài ngày 28 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = [len(tr), len(va), len(te)]\n```\n\n### Ngày 29: Dự án cuối, buổi 2: thí nghiệm và phân tích lỗi\n\n**Câu hỏi:** Model tốt hơn là do ý tưởng đúng hay do cách so sánh thiếu công bằng?\n\n**Bản chất:** Ghi bảng cấu hình, seed, train/validation metric, chi phí và ví dụ lỗi. Đổi một yếu tố mỗi thí nghiệm. Chọn cấu hình bằng validation.\n\n**Tính tay:** Bảng minh họa: train KNN=0,98/cây=1,00, val KNN=0,93/cây=0,90 → chọn KNN theo val. Các số này khác kết quả Iris được tính thực trong notebook.\n\n**Thử trên web/notebook:** Chạy baseline và hai model trên cùng split. Liệt kê năm lỗi khó và tìm nhóm mẫu gây sai; không chỉ báo một con số.\n\n**Tự kiểm tra:** Có bảng thí nghiệm và lý do chọn model, cùng biểu đồ đúng nhãn/đơn vị.\n\n**Dễ nhầm:** Không gộp số minh họa với metric thật của lần chạy. Không sửa siêu tham số theo test sau khi đã xem kết quả cuối.\n\n**Bài A:** So hai mô hình trên cùng validation; giải thích vì sao train accuracy cao chưa đủ.\n\n**Bài B:** Trong bảng minh họa val_scores, chọn tên mô hình tốt nhất. Không chọn theo train_scores.\n\n**Bài C (tùy chọn):** Với thí nghiệm thực, ghi cấu hình, seed và 5 dự đoán validation sai (hoặc toàn bộ nếu ít hơn).\n\n**Gợi ý B:** Chọn theo validation và tiêu chí đã định; test không tham gia lựa chọn.\n\nMở bài ngày 29 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = model_names[int(np.argmax(val_scores))]\n```\n\n### Ngày 30: Dự án cuối, buổi 3: đánh giá và giải thích\n\n**Câu hỏi:** Người khác có chạy lại và hiểu kết quả của em không?\n\n**Bản chất:** Đóng băng lựa chọn, đo test, trình bày metric kèm giới hạn; Restart & Run All kiểm tra notebook không dựa biến ẩn. Tự chấm rubric bằng minh chứng, không bằng cảm giác.\n\n**Tính tay:** Rubric có trọng số [15,20,15,20,15,15], mỗi mức 0–4: tiêu chí 20 điểm mức 3 được 15 điểm. Tổng 85 nhưng thiếu minh chứng một tiêu chí vẫn chưa đủ.\n\n**Thử trên web/notebook:** Tạo báo cáo 1–2 trang, chạy lại từ kernel mới, xuất tiến độ và báo cáo rubric. Dùng Tu_kiem_tra_va_Rubric.ipynb đối chiếu quy tắc tính điểm.\n\n**Tự kiểm tra:** Đủ sáu tiêu chí có mức/minh chứng và tổng tự đánh giá ≥70; giải thích được một dự đoán và ba giới hạn.\n\n**Dễ nhầm:** Điểm tự đánh giá không phải chứng chỉ hay kiểm chứng độc lập. Nếu Restart & Run All lỗi, sửa luồng phụ thuộc thay vì chạy lại tùy ý đến khi hết lỗi.\n\n**Bài A:** Chốt mô hình trước khi mở kết quả test; kiểm tra notebook chạy lại từ kernel sạch.\n\n**Bài B:** Tạo báo cáo [số mẫu test,accuracy,macro-F1] cho mô hình đã chọn bằng validation.\n\n**Bài C (tùy chọn):** Chuẩn bị 5 slide: bài toán, dữ liệu, baseline, kết quả, giới hạn; nêu một hướng cải tiến không dựa vào chỉnh theo test.\n\n**Gợi ý B:** Báo cả số mẫu và macro-F1; chất lượng quy trình quan trọng hơn một ngưỡng accuracy cố định.\n\nMở bài ngày 30 trên web; làm A/B trước. Lời giải B để đối chiếu sau khi thử:\n\n```python\nanswer = [len(te), accuracy(y[te],final_pred), macro_f1(y[te],final_pred)]\n```\n\n## Xử lý lỗi và giữ công việc của em\n\n### Bấm web không hoạt động\n\nGiải nén toàn bộ gói vào một thư mục. Trên Mac mở Mo_Jupyter_Studio.command hoặc Mo_ML_Studio.command; giữ Terminal mở. Dùng URL mà launcher in ra, thường http://127.0.0.1:8765/. Đừng chỉ mở HTML rồi trông chờ Notebook Server đã có.\n\n### Jupyter không kết nối\n\nĐọc lỗi trong Terminal launcher. Kiểm tra có Python từ 3.11 và môi trường với requirements-jupyter.txt. Launcher cài lần đầu cần mạng. Không xóa môi trường/đổi nhiều kernel cùng lúc; chọn Python 3 do launcher tạo. Không chia sẻ URL chứa token.\n\n### Notebook NameError hoặc kết quả lạ\n\nRestart kernel, chạy từ trên xuống. Ô hỗ trợ đầu notebook tạo dữ liệu/hàm dùng chung; không bỏ qua. Nếu cần học một hàm, mở định nghĩa trong ô hỗ trợ. Restart & Run All phát hiện biến còn sót từ lần trước.\n\n### Bài B in CHƯA HOÀN THÀNH\n\nĐó là trạng thái có chủ ý khi answer=None, không phải lỗi server. Thay placeholder bằng biểu thức của em. Lưu, chạy lại ô. Nếu AssertionError, so shape, đơn vị, tham số cũ/mới và công thức trước khi xem lời giải.\n\n### Loss tăng, NaN hoặc đứng yên\n\nKiểm tra dữ liệu hữu hạn, kiểu số, scale, dấu gradient, định nghĩa loss, chia N, learning rate và activation. Giảm α để thử nguyên nhân; giữ seed rồi đổi một yếu tố. So một gradient bằng sai phân số.\n\n### Điểm mô hình quá đẹp\n\nKiểm tra nhãn có lọt vào X không; scaler có fit toàn dữ liệu không; mẫu trùng hoặc cùng nhóm có xuất hiện hai tập không; test có được dùng chọn cấu hình không. Xác nhận metric đo train hay dữ liệu độc lập.\n\n### Không lưu được tiến độ\n\nXuất tiến độ JSON và lưu bản riêng trước khi đóng trình duyệt. Nhập tại Học liệu. Dữ liệu lưu theo trình duyệt và địa chỉ truy cập; đổi cổng/trình duyệt có thể thấy trạng thái khác. Notebook Jupyter cần Save riêng; xuất JSON web không sao lưu code notebook.\n\n### Đổi máy hoặc mất mạng\n\nGiữ cả ZIP, thư mục đã giải nén, notebook đã sửa, dữ liệu riêng và JSON tiến độ. Cẩm nang Markdown đọc offline. Jupyter/React build dùng local sau khi các thư viện đã được cài; cài lần đầu hoặc chức năng tải runtime bên ngoài vẫn có thể cần mạng.\n\n## Thuật ngữ\n\n- **Sample:** Một quan sát/một hàng dữ liệu.\n- **Feature:** Thông tin đầu vào có ở thời điểm dự đoán.\n- **Target/label:** Giá trị hoặc nhãn muốn dự đoán.\n- **Parameter:** Hệ số được học, ví dụ w và b.\n- **Hyperparameter:** Thiết lập lựa chọn, ví dụ learning rate hoặc độ sâu.\n- **Loss:** Hàm số đo sai dùng trong tối ưu.\n- **Metric:** Chỉ số đánh giá theo mục tiêu sử dụng.\n- **Gradient:** Vector đạo hàm loss theo tham số.\n- **Epoch:** Một lượt đọc qua train theo quy trình huấn luyện.\n- **Batch:** Nhóm mẫu dùng cho một lần tính gradient.\n- **Baseline:** Mốc so sánh đơn giản được định nghĩa trước.\n- **Leakage:** Thông tin không được phép lọt vào quá trình fit/chọn model.\n- **Validation:** Dữ liệu phát triển để chọn cấu hình.\n- **Test:** Dữ liệu đánh giá cuối sau khi chốt lựa chọn.\n- **Residual:** Dự đoán trừ giá trị thật theo quy ước của bài.\n- **Logit:** Tổng có trọng số trước sigmoid/softmax.\n- **Activation:** Hàm biến đổi đầu ra của một nút/lớp.\n- **Backpropagation:** Tính gradient qua chuỗi phép toán bằng chain rule.\n- **Embedding:** Vector biểu diễn một đối tượng.\n- **Token:** Đơn vị văn bản theo bộ tách đang dùng.\n- **Attention:** Tổng hợp V bằng trọng số tính từ Q và K.\n- **Inference:** Dùng mô hình đã học để tính đầu ra mới.\n- **Reproducibility:** Khả năng chạy lại theo cùng dữ liệu, cấu hình và môi trường.\n- **Generalization:** Khả năng làm tốt trên dữ liệu ngoài tập học theo bối cảnh xét.\n\n## Học tiếp sau ngày 30\n\n- Tháng tiếp: làm lại dự án với bộ dữ liệu mới, tự viết pipeline và báo cáo lỗi trước khi tăng độ phức tạp.\n- Bổ sung nền tảng theo nhu cầu: Python/NumPy/Pandas, đại số tuyến tính, xác suất và đạo hàm. Khi gặp công thức mới, thử ma trận 2×2 và dữ liệu vài mẫu.\n- Sau khi vững vòng ML: học một framework deep learning, autograd và huấn luyện CNN thực trên dữ liệu nhỏ; rồi mới mở rộng Transformer.\n- Đọc tài liệu chính thức của NumPy, pandas, scikit-learn, Jupyter và framework đang dùng. Ghi phiên bản, chạy ví dụ nhỏ; không sao chép code mà không hiểu shape và tập dữ liệu sử dụng.\n\n## Giới hạn của bộ học liệu hiện tại\n\nWeb hiện có mô phỏng sâu cho hồi quy đơn/đa biến, logistic, KNN, K-means, cây, PCA, mạng nơ-ron, CNN và attention (14 ngày); các ngày khác dùng mô phỏng cơ bản. CNN/attention dùng trọng số đặt sẵn để dạy forward, chưa train CNN/Transformer. Bộ mốc chấm đáp án trắc nghiệm; rubric do em tự đánh giá, minh chứng chưa được thẩm định tự động. Kiểm tra tính toán không thay kiểm tra giao diện thật hoặc đánh giá khoa học trên dữ liệu mới.\n\n## Bản em nên giữ\n\nGiữ ZIP đầy đủ, cẩm nang này, notebook .ipynb em đã lưu, dữ liệu và nguồn, JSON tiến độ cùng báo cáo rubric. Các bản kiểm tra chỉ xác nhận trong môi trường ghi trong báo cáo, không bảo đảm mọi máy và mọi phiên bản.\n\n## Kết quả kiểm tra thực thi\n\n90/90 trường hợp trên Python 3.11.15: 30 bản học viên, 30 lời giải B, 30 đáp án sai được từ chối bằng assert. Mỗi trường hợp dùng kernel mới. Phần mã không đổi sau kiểm tra; các ghi chú Markdown được bổ sung riêng. Bài tự luận A/C và giao diện trình duyệt thật chưa được nghiệm thu bởi lượt kiểm tra này.\n"
+}

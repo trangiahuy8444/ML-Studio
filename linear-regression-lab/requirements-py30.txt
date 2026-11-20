@@ -1,0 +1,4 @@
+-r requirements-jupyter.txt
+torch
+torchvision
+kaggle

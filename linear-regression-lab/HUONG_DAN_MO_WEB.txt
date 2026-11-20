@@ -1,0 +1,34 @@
+ML STUDIO — JUPYTER NOTEBOOK THẬT
+
+MỖI LẦN HỌC TRÊN MAC
+1. Giải nén toàn bộ ZIP; giữ nguyên thư mục web và các tệp .ipynb.
+2. Bấm đúp Mo_Jupyter_Studio.command (hoặc Mo_ML_Studio.command).
+3. Lần đầu cần Internet để cài môi trường Python riêng và Jupyter.
+4. Web tự mở. Vào bài, bấm Mở Jupyter Notebook để mở đúng tệp ở tab riêng.
+5. Trong Jupyter: Shift+Enter chạy ô; Cell → Run All chạy cả bài; Save and Checkpoint lưu mã và kết quả vào tệp trên máy.
+6. Giữ Terminal mở khi học; Ctrl+C dừng cả web và Jupyter.
+
+Nếu thiếu quyền chạy: mở Terminal tại thư mục bộ thực hành rồi chạy:
+  zsh Mo_Jupyter_Studio.command
+Cần Python 3.11 trở lên. Môi trường riêng nằm ở ~/.venvs/ml-studio-jupyter, không nằm trên Google Drive. Lần sau tái sử dụng môi trường, không cài lại khi đã đủ thư viện.
+
+LƯU Ý KHI CHUYỂN TỪ BẢN CŨ
+Mở HTML trực tiếp hoặc chạy server tĩnh chỉ dùng được mô phỏng và phần chạy thử Pyodide. Muốn dùng Jupyter thật phải chạy launcher mới.
+Mã từng sửa trong trình duyệt không tự chuyển vào Jupyter; hãy xuất .ipynb từ phần Pyodide rồi mở bản đó trong Jupyter nếu muốn giữ các chỉnh sửa cũ.
+Notebook thật mở ở tab riêng; tiến độ đánh dấu vẫn quản lý trong web.
+Không giải nén đè lên notebook em đã sửa: lưu bản dự phòng hoặc giải nén vào thư mục mới.
+
+KIỂM TRA
+Đã kiểm tra build TypeScript, 7 kiểm tra mô hình/điều hướng/tô màu; 32 liên kết notebook, chạy NumPy qua WebSocket kernel thật, lưu/checkpoint/đọc lại kết quả.
+
+CẬP NHẬT CÂY VÀ PCA
+Ngày 15 và 18 có mô phỏng sâu. Trong dự án giá nhà cũng có tab Cây quyết định / PCA. Khởi động lại Mo_Jupyter_Studio.command để thấy notebook Cay_quyet_dinh_va_PCA.ipynb. Tải JSON từ mô phỏng rồi đưa vào thư mục notebook để kiểm tra NumPy.
+
+Ngày 19–21: mô phỏng Mạng nơ-ron, 7 bước forward/backward/update. Mở notebook Mang_no_ron_tung_buoc.ipynb bằng nút Jupyter thật trên web. Có thực hành A/B/C và đối chiếu trace NumPy.
+
+Ngày 22 và 25: CNN và Attention từng bước. Nhấn pixel ảnh, đổi cửa sổ; chọn token và causal mask. Mở CNN_va_Attention_tung_buoc.ipynb bằng nút Jupyter thật để kiểm chứng JSON bằng NumPy. Đây là forward với trọng số đặt sẵn, chưa huấn luyện CNN/Transformer.
+
+Menu “Kiểm tra và dự án”: mốc ngày 7/16/21, rubric dự án ngày 30. Điểm tự kiểm tra và minh chứng lưu trên trình duyệt, có Xuất tiến độ JSON và Nhập tiến độ tại Học liệu. Tệp cũ vẫn nhập được. Rubric là tự đánh giá; nhập minh chứng chưa có nghĩa đã được kiểm chứng. Mở Tu_kiem_tra_va_Rubric.ipynb từ nút Jupyter để tính lại điểm bằng Python.
+
+BÀN GIAO TỰ HỌC
+Mở menu Cẩm nang tự học (#guide), chọn ngày và đọc ví dụ trước khi thực hành. Có nút tải cẩm nang Markdown đọc offline. ZIP có Cam_nang_tu_hoc_AI_30_ngay.md, báo cáo kiểm tra 30 notebook và công cụ chạy lại kiểm tra. 90/90 trường hợp thực thi đã đạt trong môi trường ghi ở báo cáo; đây không thay đánh giá tự luận hoặc mọi máy. Giữ notebook đã Save và JSON tiến độ riêng.

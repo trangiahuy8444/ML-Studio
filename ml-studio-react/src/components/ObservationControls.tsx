@@ -1,0 +1,15 @@
+import {useEffect,useLayoutEffect,useState} from 'react';
+import {Play,Pause,SkipBack,SkipForward,RotateCcw} from 'lucide-react';
+const f=(v:number,d=4)=>Number.isFinite(v)?v.toLocaleString('vi-VN',{maximumFractionDigits:d}):'Không hữu hạn';
+export function usePlayback(count:number,revision:unknown){
+ const [index,setIndex]=useState(0),[playing,setPlaying]=useState(false),[speed,setSpeed]=useState(1);
+ useLayoutEffect(()=>{setIndex(0);setPlaying(false)},[revision]);
+ useEffect(()=>{if(!playing)return;const timer=setTimeout(()=>{if(index>=count-1)setPlaying(false);else setIndex(i=>i+1)},1100/speed);return()=>clearTimeout(timer)},[playing,index,speed,count]);
+ useEffect(()=>{const pause=()=>{if(document.hidden)setPlaying(false)};document.addEventListener('visibilitychange',pause);return()=>document.removeEventListener('visibilitychange',pause)},[]);
+ function seek(value:number){setPlaying(false);setIndex(Math.max(0,Math.min(count-1,value)))}
+ return {index:Math.min(index,count-1),playing,speed,setSpeed,seek,toggle:()=>{if(index===count-1)setIndex(0);setPlaying(v=>!v)}};
+}
+type Playback=ReturnType<typeof usePlayback>;
+export function Transport({player,count}:{player:Playback;count:number}){return <div className="algo-transport" role="group" aria-label="Điều khiển mô phỏng từng phép tính"><div className="algo-buttons"><button onClick={()=>player.seek(0)} aria-label="Về trạng thái đầu"><RotateCcw size={16}/> Đặt lại</button><button onClick={()=>player.seek(player.index-1)} disabled={player.index===0} aria-label="Lùi một phép tính"><SkipBack size={16}/></button><button className="algo-play" onClick={player.toggle}>{player.playing?<Pause size={16}/>:<Play size={16}/>} {player.playing?'Tạm dừng':'Bắt đầu'}</button><button onClick={()=>player.seek(player.index+1)} disabled={player.index===count-1} aria-label="Tiến một phép tính">Từng bước <SkipForward size={16}/></button><label>Tốc độ<select aria-label="Tốc độ mô phỏng" value={player.speed} onChange={e=>player.setSpeed(+e.target.value)}>{[.5,1,2,4].map(v=><option key={v} value={v}>{v}×</option>)}</select></label></div><label className="algo-timeline">Tua lại phép tính <output>{player.index+1}/{count}</output><input aria-label="Tua lại phép tính" type="range" min={0} max={count-1} step={1} value={player.index} onChange={e=>player.seek(+e.target.value)}/></label></div>}
+export function Table({headers,rows,active=-1}:{headers:string[];rows:(string|number)[][];active?:number}){return <div className="algo-table-scroll"><table className="algo-table"><thead><tr>{headers.map(h=><th key={h} scope="col">{h}</th>)}</tr></thead><tbody>{rows.map((row,i)=><tr key={i} className={i===active?'active':''}>{row.map((v,j)=><td key={j}>{v}</td>)}</tr>)}</tbody></table></div>}
+export function Range({label,value,min,max,step=1,change}:{label:string;value:number;min:number;max:number;step?:number;change:(v:number)=>void}){return <label className="algo-range">{label}<output>{f(value)}</output><input type="range" aria-label={label} min={min} max={max} step={step} value={value} onChange={e=>change(+e.target.value)}/></label>}

@@ -1,0 +1,441 @@
+[
+ {
+  "id": 8,
+  "title": "Hồi quy logistic và cross-entropy",
+  "projectTitle": "Titanic",
+  "goals": [
+   "Viết sigmoid ổn định số và log-loss có chặn xác suất",
+   "Tính gradient Xᵀ(σ(Xw) − y)/n và kiểm tra bằng sai phân",
+   "Huấn luyện bằng gradient descent và khớp scikit-learn"
+  ],
+  "reads": [
+   "ISLR, §4.3 Logistic Regression",
+   "Stanford CS229, §2.1 Logistic regression",
+   "Vũ Hữu Tiệp, Machine Learning cơ bản, Chương 14 Hồi quy logistic",
+   "UC Berkeley CS189, Lecture 10–11 \"Logistic Regression\""
+  ],
+  "project": "Tải Titanic (python py30/download_data.py titanic). Khám phá tỉ lệ sống theo Sex và Pclass, ghi lại các cột có giá trị thiếu. Chưa huấn luyện mô hình; mục tiêu là danh sách cột số, cột phân loại và kế hoạch xử lý thiếu cho ngày 13–14.",
+  "questions": [
+   "Vì sao không dùng MSE làm hàm mất mát cho xác suất?",
+   "Nhân w lên 2 lần: ranh giới σ(z)=0,5 đổi không, xác suất đổi thế nào?",
+   "Dữ liệu tách được tuyến tính hoàn toàn thì ‖w‖ ra sao khi không có regularization?"
+  ],
+  "answers": [
+   "Với sigmoid, MSE cho hàm mục tiêu không lồi theo w và gradient rất nhỏ khi dự đoán sai mạnh; log-loss lồi và là âm log-likelihood Bernoulli.",
+   "Ranh giới z=0 không đổi; mọi xác suất bị đẩy về gần 0 hoặc 1 hơn.",
+   "‖w‖ tăng mãi vì loss luôn giảm khi phóng to w; cần regularization hoặc dừng sớm."
+  ],
+  "steps": [
+   {
+    "line": "z = Xb @ w",
+    "state": "Xb = [[1, −0,75], [1, 1,25], [1, 2,25]], w = [0,2, 0,8] → z = [−0,4, 1,2, 2,0]"
+   },
+   {
+    "line": "p = sigmoid(z)",
+    "state": "p = [0,40, 0,77, 0,88]"
+   },
+   {
+    "line": "error = p - y",
+    "state": "y = [0, 1, 1] → error = [0,40, −0,23, −0,12]"
+   },
+   {
+    "line": "grad = Xb.T @ error / n",
+    "state": "grad = [0,017, −0,286]"
+   },
+   {
+    "line": "w = w - lr * grad",
+    "state": "lr = 0,5 → w = [0,192, 0,943]"
+   }
+  ],
+  "setup": "import json, warnings\nfrom pathlib import Path\nimport numpy as np\nimport pandas as pd\nfrom sklearn.datasets import load_breast_cancer\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.preprocessing import StandardScaler\n\nDATA = next((p for p in (Path('data'), Path('../data')) if p.is_dir()), Path('data'))\n# Breast Cancer Wisconsin (Diagnostic), UCI, có sẵn trong scikit-learn. 569 mẫu, 30 đặc trưng.\n_bc = load_breast_cancer()\nX_bc = _bc.data\ny_bc = 1 - _bc.target   # 1 = ác tính (lớp cần phát hiện), 0 = lành tính\nfeature_names = list(_bc.feature_names)\n\ndef _check(name, fn):\n    try:\n        ok, detail = fn()\n    except NotImplementedError:\n        ok, detail = False, 'Chưa cài đặt (NotImplementedError)'\n    except Exception as error:\n        ok, detail = False, f'{type(error).__name__}: {error}'\n    return {'name': name, 'ok': bool(ok), 'detail': str(detail)}\n\ndef _report(ex_id, *checks):\n    print('__PY30__' + json.dumps({'id': ex_id, 'checks': list(checks)}, ensure_ascii=False))\n\n# Một phép chia dùng chung cho cả tuần: 70% train, 30% validation, phân tầng theo nhãn.\nidx_tr, idx_va = train_test_split(np.arange(len(y_bc)), test_size=0.3, random_state=0, stratify=y_bc)\n_scaler = StandardScaler().fit(X_bc[idx_tr])\nX_tr, X_va = _scaler.transform(X_bc[idx_tr]), _scaler.transform(X_bc[idx_va])\ny_tr, y_va = y_bc[idx_tr], y_bc[idx_va]\nfrom sklearn.metrics import log_loss as _sk_log_loss\n_Xs = X_bc[:, [0, 1]]                      # mean radius, mean texture\n_Xs = (_Xs - _Xs.mean(0)) / _Xs.std(0)\n_Xb = np.column_stack([np.ones(len(_Xs)), _Xs])\n_ref8 = LogisticRegression(penalty=None, max_iter=10000).fit(_Xs, y_bc)\n_ref8_loss = _sk_log_loss(y_bc, _ref8.predict_proba(_Xs)[:, 1])\ndef _no_warning(fn):\n    with warnings.catch_warnings():\n        warnings.simplefilter('error')\n        return fn()\ndef _num_grad(f, w, eps=1e-6):\n    return np.array([(f(w + eps*e) - f(w - eps*e)) / (2*eps) for e in np.eye(len(w))])\n",
+  "exercises": [
+   {
+    "id": "d8-logistic",
+    "title": "Sigmoid, log-loss, gradient và huấn luyện",
+    "hint": "σ(z) = exp(−log(1 + e⁻ᶻ)) dùng np.logaddexp(0, −z) để không tràn số. Chặn p trong [eps, 1−eps] trước khi lấy log.",
+    "starter": "def sigmoid(z):\n    raise NotImplementedError\n\ndef log_loss(y, p, eps=1e-12):\n    raise NotImplementedError\n\ndef logistic_grad(Xb, y, w):\n    # Xb đã có cột 1 ở đầu. Trả gradient của log_loss theo w.\n    raise NotImplementedError\n\ndef fit_logistic(Xb, y, lr=0.5, steps=3000):\n    # Gradient descent từ w = 0.\n    raise NotImplementedError\n",
+    "solution": "def sigmoid(z):\n    return np.exp(-np.logaddexp(0, -np.asarray(z, dtype=float)))\n\ndef log_loss(y, p, eps=1e-12):\n    p = np.clip(p, eps, 1 - eps)\n    return -np.mean(y * np.log(p) + (1 - y) * np.log(1 - p))\n\ndef logistic_grad(Xb, y, w):\n    return Xb.T @ (sigmoid(Xb @ w) - y) / len(y)\n\ndef fit_logistic(Xb, y, lr=0.5, steps=3000):\n    w = np.zeros(Xb.shape[1])\n    for _ in range(steps):\n        w = w - lr * logistic_grad(Xb, y, w)\n    return w\n",
+    "test": "_report('d8-logistic',\n    _check('Sigmoid đúng và không tràn số', lambda: (np.allclose(_no_warning(lambda: sigmoid(np.array([-1000., 0., 1000.]))), [0, .5, 1]), 'Không cảnh báo overflow khi z = ±1000.')),\n    _check('Log-loss khớp scikit-learn, hữu hạn khi p = 0 hoặc 1', lambda: (np.isclose(log_loss(np.array([1,0,1,0]), np.array([.9,.2,.6,.4])), _sk_log_loss([1,0,1,0],[.9,.2,.6,.4])) and np.isfinite(log_loss(np.array([1,0]), np.array([0.,1.]))), 'Chặn p trước khi lấy log.')),\n    _check('Gradient khớp sai phân trung tâm', lambda: (np.allclose(logistic_grad(_Xb, y_bc, np.array([.2,-.5,.3])), _num_grad(lambda w: log_loss(y_bc, sigmoid(_Xb @ w)), np.array([.2,-.5,.3])), atol=1e-6), 'So tại w = [0,2, −0,5, 0,3].')),\n    _check('Huấn luyện đạt loss của scikit-learn (sai lệch ≤ 1e-4)', lambda: (log_loss(y_bc, sigmoid(_Xb @ fit_logistic(_Xb, y_bc))) <= _ref8_loss + 1e-4, f'Loss tham chiếu {_ref8_loss:.5f}.')),\n)\n"
+   }
+  ]
+ },
+ {
+  "id": 9,
+  "title": "Ngưỡng, ROC/PR và mất cân bằng lớp",
+  "projectTitle": "Credit Card Fraud",
+  "goals": [
+   "Tính confusion matrix, precision, recall, F1 từ dự đoán",
+   "Dựng đường ROC đúng cả khi có điểm số trùng nhau và tính AUC",
+   "Chọn ngưỡng lớn nhất còn đạt recall yêu cầu"
+  ],
+  "reads": [
+   "ISLR, §4.4.3 (confusion matrix, ROC trên dữ liệu Default) và §4.5",
+   "Vũ Hữu Tiệp, Machine Learning cơ bản, §5.1 Nhiệm vụ, kinh nghiệm, phép đánh giá"
+  ],
+  "project": "Tải Credit Card Fraud (python py30/download_data.py fraud). Tính tỉ lệ giao dịch gian lận. Huấn luyện logistic trên một phép chia phân tầng, so ROC-AUC với average precision, rồi chọn ngưỡng cho recall ≥ 0,9 và ghi precision tương ứng. Viết hai câu giải thích vì sao accuracy gần như vô nghĩa ở đây.",
+  "questions": [
+   "Precision phụ thuộc tỉ lệ lớp dương, còn ROC thì ít hơn: vì sao?",
+   "AUC = 0,5 nghĩa là gì?",
+   "Đổi ngưỡng có đổi mô hình không?"
+  ],
+  "answers": [
+   "ROC dùng TPR và FPR, mỗi đại lượng chuẩn hóa trong một lớp; precision trộn số dự đoán dương từ cả hai lớp nên tỉ lệ lớp làm thay đổi nó.",
+   "Xếp hạng không tốt hơn ngẫu nhiên: xác suất một mẫu dương ngẫu nhiên có điểm cao hơn một mẫu âm ngẫu nhiên là 0,5.",
+   "Không. Mô hình và điểm số giữ nguyên; chỉ quy tắc biến điểm thành nhãn thay đổi."
+  ],
+  "steps": [
+   {
+    "line": "order = np.argsort(-score)",
+    "state": "score = [0,9, 0,7, 0,7, 0,2] → đã giảm dần"
+   },
+   {
+    "line": "distinct = chỉ số cuối mỗi nhóm điểm trùng",
+    "state": "nhóm: {0,9}, {0,7, 0,7}, {0,2}"
+   },
+   {
+    "line": "tps = np.cumsum(y_sorted)[distinct]",
+    "state": "y = [1, 1, 0, 0] → tps = [1, 2, 2]"
+   },
+   {
+    "line": "fps = (distinct + 1) - tps",
+    "state": "fps = [0, 1, 2]"
+   },
+   {
+    "line": "tpr, fpr = tps/P, fps/N (thêm điểm 0)",
+    "state": "TPR = [0; 0,5; 1; 1], FPR = [0; 0; 0,5; 1]"
+   },
+   {
+    "line": "auc = trapz(tpr, fpr)",
+    "state": "AUC = 0,875"
+   }
+  ],
+  "setup": "import json, warnings\nfrom pathlib import Path\nimport numpy as np\nimport pandas as pd\nfrom sklearn.datasets import load_breast_cancer\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.preprocessing import StandardScaler\n\nDATA = next((p for p in (Path('data'), Path('../data')) if p.is_dir()), Path('data'))\n# Breast Cancer Wisconsin (Diagnostic), UCI, có sẵn trong scikit-learn. 569 mẫu, 30 đặc trưng.\n_bc = load_breast_cancer()\nX_bc = _bc.data\ny_bc = 1 - _bc.target   # 1 = ác tính (lớp cần phát hiện), 0 = lành tính\nfeature_names = list(_bc.feature_names)\n\ndef _check(name, fn):\n    try:\n        ok, detail = fn()\n    except NotImplementedError:\n        ok, detail = False, 'Chưa cài đặt (NotImplementedError)'\n    except Exception as error:\n        ok, detail = False, f'{type(error).__name__}: {error}'\n    return {'name': name, 'ok': bool(ok), 'detail': str(detail)}\n\ndef _report(ex_id, *checks):\n    print('__PY30__' + json.dumps({'id': ex_id, 'checks': list(checks)}, ensure_ascii=False))\n\n# Một phép chia dùng chung cho cả tuần: 70% train, 30% validation, phân tầng theo nhãn.\nidx_tr, idx_va = train_test_split(np.arange(len(y_bc)), test_size=0.3, random_state=0, stratify=y_bc)\n_scaler = StandardScaler().fit(X_bc[idx_tr])\nX_tr, X_va = _scaler.transform(X_bc[idx_tr]), _scaler.transform(X_bc[idx_va])\ny_tr, y_va = y_bc[idx_tr], y_bc[idx_va]\nfrom sklearn import metrics as _m\n_clf9 = LogisticRegression(max_iter=5000).fit(X_tr, y_tr)\nscore_va = _clf9.predict_proba(X_va)[:, 1]\n_r9 = np.random.default_rng(9)\n_yt = _r9.integers(0, 2, 80); _yt[:2] = [0, 1]\n_st = np.round(_r9.random(80), 1)            # làm tròn để có nhiều điểm trùng\ndef _prf_ok(fn):\n    for y, yhat in [(_yt, (_st >= .5).astype(int)), (_yt, np.zeros_like(_yt)), (y_va, (score_va >= .3).astype(int))]:\n        ref = (_m.precision_score(y, yhat, zero_division=0), _m.recall_score(y, yhat, zero_division=0), _m.f1_score(y, yhat, zero_division=0))\n        if not np.allclose(fn(y, yhat), ref):\n            return False\n    return True\ndef _brute_threshold(y, score, target):\n    for t in np.sort(np.unique(score))[::-1]:\n        if (score[y == 1] >= t).mean() >= target:\n            return t\n",
+  "exercises": [
+   {
+    "id": "d9-metrics",
+    "title": "Confusion matrix, precision/recall và ROC-AUC",
+    "hint": "Sắp điểm giảm dần; các điểm bằng nhau phải vào cùng một bước của đường ROC. AUC là tổng diện tích các hình thang.",
+    "starter": "def confusion(y, yhat):\n    # Trả mảng 2×2 [[TN, FP], [FN, TP]].\n    raise NotImplementedError\n\ndef precision_recall_f1(y, yhat):\n    # Trả (precision, recall, f1); khi mẫu số bằng 0 thì đại lượng đó bằng 0.\n    raise NotImplementedError\n\ndef roc_points(y, score):\n    # Trả (fpr, tpr), bắt đầu tại (0, 0), mỗi ngưỡng phân biệt là một điểm.\n    raise NotImplementedError\n\ndef auc_trapz(fpr, tpr):\n    raise NotImplementedError\n",
+    "solution": "def confusion(y, yhat):\n    y, yhat = np.asarray(y), np.asarray(yhat)\n    return np.array([[np.sum((y == 0) & (yhat == 0)), np.sum((y == 0) & (yhat == 1))],\n                     [np.sum((y == 1) & (yhat == 0)), np.sum((y == 1) & (yhat == 1))]])\n\ndef precision_recall_f1(y, yhat):\n    (tn, fp), (fn, tp) = confusion(y, yhat)\n    p = tp / (tp + fp) if tp + fp else 0.0\n    r = tp / (tp + fn) if tp + fn else 0.0\n    f = 2 * p * r / (p + r) if p + r else 0.0\n    return p, r, f\n\ndef roc_points(y, score):\n    y, score = np.asarray(y), np.asarray(score)\n    order = np.argsort(-score, kind='mergesort')\n    s, t = score[order], y[order]\n    distinct = np.r_[np.where(np.diff(s))[0], len(s) - 1]\n    tps = np.cumsum(t)[distinct]\n    fps = (distinct + 1) - tps\n    return np.r_[0, fps / (len(t) - t.sum())], np.r_[0, tps / t.sum()]\n\ndef auc_trapz(fpr, tpr):\n    return float(np.sum(np.diff(fpr) * (tpr[1:] + tpr[:-1]) / 2))\n",
+    "test": "_report('d9-metrics',\n    _check('Confusion matrix khớp scikit-learn', lambda: (np.array_equal(confusion(y_va, score_va >= .5), _m.confusion_matrix(y_va, score_va >= .5, labels=[0, 1])), 'Thứ tự [[TN, FP], [FN, TP]].')),\n    _check('Precision, recall, F1 (kể cả khi không có dự đoán dương)', lambda: (_prf_ok(precision_recall_f1), 'Ba trường hợp, zero_division = 0.')),\n    _check('AUC đúng khi có điểm trùng', lambda: (np.isclose(auc_trapz(*roc_points(_yt, _st)), _m.roc_auc_score(_yt, _st)), 'Điểm số làm tròn 1 chữ số thập phân.')),\n    _check('Đường ROC bắt đầu (0,0), kết thúc (1,1), không giảm', lambda: ((lambda f, t: f[0] == t[0] == 0 and np.isclose(f[-1], 1) and np.isclose(t[-1], 1) and np.all(np.diff(f) >= 0) and np.all(np.diff(t) >= 0))(*roc_points(y_va, score_va)), 'Trên điểm số validation của logistic.')),\n)\n"
+   },
+   {
+    "id": "d9-threshold",
+    "title": "Chọn ngưỡng theo recall yêu cầu",
+    "hint": "Duyệt các giá trị điểm phân biệt từ lớn đến nhỏ; dự đoán dương khi score ≥ t. Dừng ở ngưỡng đầu tiên đạt recall mục tiêu.",
+    "starter": "def threshold_for_recall(y, score, target):\n    # Trả ngưỡng t lớn nhất (trong các giá trị score) sao cho recall của (score >= t) >= target.\n    raise NotImplementedError\n",
+    "solution": "def threshold_for_recall(y, score, target):\n    y, score = np.asarray(y), np.asarray(score)\n    for t in np.sort(np.unique(score))[::-1]:\n        if (score[y == 1] >= t).mean() >= target:\n            return float(t)\n    return float(score.min())\n",
+    "test": "_report('d9-threshold',\n    _check('Recall ≥ 0,95 với ngưỡng lớn nhất', lambda: (np.isclose(threshold_for_recall(y_va, score_va, .95), _brute_threshold(y_va, score_va, .95)), 'Đối chiếu duyệt toàn bộ ngưỡng.')),\n    _check('Đúng với dữ liệu có điểm trùng', lambda: (np.isclose(threshold_for_recall(_yt, _st, .8), _brute_threshold(_yt, _st, .8)), 'Dự đoán dương khi score ≥ t.')),\n)\n"
+   }
+  ]
+ },
+ {
+  "id": 10,
+  "title": "KNN và lời nguyền số chiều",
+  "projectTitle": "Titanic",
+  "goals": [
+   "Cài KNN vector hóa bằng khoảng cách cặp của ngày 1",
+   "Thấy vì sao KNN bắt buộc chuẩn hóa thang đo",
+   "Đo độ tương phản khoảng cách gần nhất/xa nhất khi số chiều tăng"
+  ],
+  "reads": [
+   "ISLR, §2.2.3 The Classification Setting (đoạn K-Nearest Neighbors) và §3.5",
+   "Vũ Hữu Tiệp, Machine Learning cơ bản, Chương 9 K lân cận"
+  ],
+  "project": "Trên Titanic, chọn hai cột số (Age, Fare). Thử KNN với và không chuẩn hóa bằng cross_val_score; ghi accuracy và giải thích vì sao Fare lấn át Age khi chưa chuẩn hóa.",
+  "questions": [
+   "Vì sao KNN bắt buộc chuẩn hóa?",
+   "Chi phí dự đoán một điểm của KNN theo n và d?",
+   "Lời nguyền số chiều làm khái niệm \"gần\" mất nghĩa ra sao?"
+  ],
+  "answers": [
+   "Khoảng cách Euclid cộng bình phương chênh lệch từng cột; cột có thang đo lớn chi phối khoảng cách.",
+   "O(n·d) để tính khoảng cách tới mọi điểm train, cộng chi phí chọn k nhỏ nhất.",
+   "Khi d lớn, khoảng cách tới điểm gần nhất và xa nhất xấp xỉ nhau nên \"láng giềng gần\" không còn khác biệt rõ."
+  ],
+  "steps": [
+   {
+    "line": "D = pairwise_sq_dists(X_test, X_train)",
+    "state": "D.shape = (1, 6)"
+   },
+   {
+    "line": "nearest = np.argsort(D, axis=1)[:, :k]",
+    "state": "k = 3 → chỉ số [4, 0, 2]"
+   },
+   {
+    "line": "labels = y_train[nearest]",
+    "state": "labels = [1, 0, 1]"
+   },
+   {
+    "line": "votes = np.bincount(labels, minlength=2)",
+    "state": "votes = [1, 2]"
+   },
+   {
+    "line": "pred = votes.argmax()",
+    "state": "pred = 1"
+   }
+  ],
+  "setup": "import json, warnings\nfrom pathlib import Path\nimport numpy as np\nimport pandas as pd\nfrom sklearn.datasets import load_breast_cancer\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.preprocessing import StandardScaler\n\nDATA = next((p for p in (Path('data'), Path('../data')) if p.is_dir()), Path('data'))\n# Breast Cancer Wisconsin (Diagnostic), UCI, có sẵn trong scikit-learn. 569 mẫu, 30 đặc trưng.\n_bc = load_breast_cancer()\nX_bc = _bc.data\ny_bc = 1 - _bc.target   # 1 = ác tính (lớp cần phát hiện), 0 = lành tính\nfeature_names = list(_bc.feature_names)\n\ndef _check(name, fn):\n    try:\n        ok, detail = fn()\n    except NotImplementedError:\n        ok, detail = False, 'Chưa cài đặt (NotImplementedError)'\n    except Exception as error:\n        ok, detail = False, f'{type(error).__name__}: {error}'\n    return {'name': name, 'ok': bool(ok), 'detail': str(detail)}\n\ndef _report(ex_id, *checks):\n    print('__PY30__' + json.dumps({'id': ex_id, 'checks': list(checks)}, ensure_ascii=False))\n\n# Một phép chia dùng chung cho cả tuần: 70% train, 30% validation, phân tầng theo nhãn.\nidx_tr, idx_va = train_test_split(np.arange(len(y_bc)), test_size=0.3, random_state=0, stratify=y_bc)\n_scaler = StandardScaler().fit(X_bc[idx_tr])\nX_tr, X_va = _scaler.transform(X_bc[idx_tr]), _scaler.transform(X_bc[idx_va])\ny_tr, y_va = y_bc[idx_tr], y_bc[idx_va]\nfrom sklearn.neighbors import KNeighborsClassifier\ndef _knn_ok(fn, k):\n    ref = KNeighborsClassifier(n_neighbors=k, algorithm='brute').fit(X_tr, y_tr).predict(X_va)\n    return np.array_equal(np.asarray(fn(X_tr, y_tr, X_va, k)), ref)\n",
+  "exercises": [
+   {
+    "id": "d10-knn",
+    "title": "Dự đoán KNN",
+    "hint": "Tính ma trận khoảng cách (n_test × n_train) bằng broadcasting, lấy k cột nhỏ nhất mỗi hàng, đếm phiếu bằng np.bincount.",
+    "starter": "def knn_predict(X_train, y_train, X_test, k):\n    # Nhãn là số nguyên 0..C-1. Hòa phiếu thì chọn nhãn nhỏ hơn.\n    raise NotImplementedError\n",
+    "solution": "def knn_predict(X_train, y_train, X_test, k):\n    D = ((X_test[:, None, :] - X_train[None, :, :]) ** 2).sum(axis=2)\n    nearest = np.argsort(D, axis=1, kind='stable')[:, :k]\n    labels = np.asarray(y_train)[nearest]\n    n_classes = int(np.max(y_train)) + 1\n    return np.array([np.bincount(row, minlength=n_classes).argmax() for row in labels])\n",
+    "test": "_report('d10-knn',\n    _check('Khớp scikit-learn với k = 1', lambda: (_knn_ok(knn_predict, 1), 'Trên dữ liệu đã chuẩn hóa.')),\n    _check('Khớp scikit-learn với k = 5 và k = 15', lambda: (_knn_ok(knn_predict, 5) and _knn_ok(knn_predict, 15), 'Bỏ phiếu đa số.')),\n)\n"
+   },
+   {
+    "id": "d10-curse",
+    "title": "Đo lời nguyền số chiều",
+    "hint": "Sinh n điểm đều trong [0,1]^d bằng rng.random((n, d)). Với mỗi điểm truy vấn, tính (d_max − d_min)/d_min tới các điểm còn lại.",
+    "starter": "def distance_contrast(n, d, seed, queries=20):\n    # Trung bình (d_max - d_min) / d_min trên `queries` điểm truy vấn đầu tiên.\n    raise NotImplementedError\n",
+    "solution": "def distance_contrast(n, d, seed, queries=20):\n    X = np.random.default_rng(seed).random((n, d))\n    out = []\n    for i in range(queries):\n        dist = np.sqrt(((np.delete(X, i, axis=0) - X[i]) ** 2).sum(axis=1))\n        out.append((dist.max() - dist.min()) / dist.min())\n    return float(np.mean(out))\n",
+    "test": "_report('d10-curse',\n    _check('Độ tương phản giảm mạnh khi d tăng', lambda: ((lambda a, b, c: a > b > c > 0 and a > 5 * c)(distance_contrast(200, 2, 0), distance_contrast(200, 50, 0), distance_contrast(200, 1000, 0)), 'd = 2, 50, 1000.')),\n    _check('Cùng seed cho cùng kết quả', lambda: (distance_contrast(100, 10, 3) == distance_contrast(100, 10, 3), 'Dùng np.random.default_rng(seed).')),\n)\n"
+   }
+  ]
+ },
+ {
+  "id": 11,
+  "title": "Mô hình sinh: Gaussian Naive Bayes",
+  "projectTitle": "Titanic",
+  "goals": [
+   "Ước lượng tiên nghiệm, trung bình, phương sai từng lớp bằng MLE",
+   "Tính log hậu nghiệm đã chuẩn hóa bằng log-sum-exp",
+   "So mô hình sinh với logistic khi ít dữ liệu train"
+  ],
+  "reads": [
+   "Stanford CS229, §4.1 Gaussian discriminant analysis; §4.2 Naive bayes",
+   "Vũ Hữu Tiệp, Machine Learning cơ bản, Chương 11 Bộ phân loại naive Bayes; Chương 4 (MLE, MAP)",
+   "ISLR, §4.4 Linear Discriminant Analysis"
+  ],
+  "project": "Trên Titanic, so GaussianNB và LogisticRegression khi chỉ dùng 10%, 30%, 100% dữ liệu train (cùng tập validation). Vẽ accuracy theo kích thước train.",
+  "questions": [
+   "Giả định \"naive\" là gì?",
+   "Vì sao tính bằng log?",
+   "Khi nào mô hình sinh có lợi khi ít dữ liệu?"
+  ],
+  "answers": [
+   "Các đặc trưng độc lập có điều kiện khi biết lớp, nên p(x|y) là tích các mật độ một chiều.",
+   "Tích nhiều mật độ nhỏ bị tràn dưới (underflow); tổng log ổn định và dễ cộng tiên nghiệm.",
+   "Khi giả định của mô hình gần đúng, nó cần ít tham số hơn nên ước lượng ổn định hơn với ít mẫu."
+  ],
+  "steps": [
+   {
+    "line": "prior[c] = mean(y == c)",
+    "state": "trên X_tr: prior = [0,628, 0,372]"
+   },
+   {
+    "line": "mean[c], var[c] = X[y==c].mean(0), X[y==c].var(0) + eps",
+    "state": "mean[1, :2] = [0,94, 0,51] (lớp ác tính, đã chuẩn hóa)"
+   },
+   {
+    "line": "jll = log prior − ½Σ log(2πvar) − ½Σ (x−mean)²/var",
+    "state": "mẫu validation đầu tiên: jll = [−23,1, −54,9]"
+   },
+   {
+    "line": "log_post = jll − logsumexp(jll)",
+    "state": "log_post = [−0,000, −31,8]"
+   },
+   {
+    "line": "pred = argmax(log_post)",
+    "state": "pred = 0 (lành tính, đúng nhãn)"
+   }
+  ],
+  "setup": "import json, warnings\nfrom pathlib import Path\nimport numpy as np\nimport pandas as pd\nfrom sklearn.datasets import load_breast_cancer\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.preprocessing import StandardScaler\n\nDATA = next((p for p in (Path('data'), Path('../data')) if p.is_dir()), Path('data'))\n# Breast Cancer Wisconsin (Diagnostic), UCI, có sẵn trong scikit-learn. 569 mẫu, 30 đặc trưng.\n_bc = load_breast_cancer()\nX_bc = _bc.data\ny_bc = 1 - _bc.target   # 1 = ác tính (lớp cần phát hiện), 0 = lành tính\nfeature_names = list(_bc.feature_names)\n\ndef _check(name, fn):\n    try:\n        ok, detail = fn()\n    except NotImplementedError:\n        ok, detail = False, 'Chưa cài đặt (NotImplementedError)'\n    except Exception as error:\n        ok, detail = False, f'{type(error).__name__}: {error}'\n    return {'name': name, 'ok': bool(ok), 'detail': str(detail)}\n\ndef _report(ex_id, *checks):\n    print('__PY30__' + json.dumps({'id': ex_id, 'checks': list(checks)}, ensure_ascii=False))\n\n# Một phép chia dùng chung cho cả tuần: 70% train, 30% validation, phân tầng theo nhãn.\nidx_tr, idx_va = train_test_split(np.arange(len(y_bc)), test_size=0.3, random_state=0, stratify=y_bc)\n_scaler = StandardScaler().fit(X_bc[idx_tr])\nX_tr, X_va = _scaler.transform(X_bc[idx_tr]), _scaler.transform(X_bc[idx_va])\ny_tr, y_va = y_bc[idx_tr], y_bc[idx_va]\nfrom scipy.special import logsumexp\nfrom sklearn.naive_bayes import GaussianNB\n_ref11 = GaussianNB().fit(X_tr, y_tr)\n",
+  "exercises": [
+   {
+    "id": "d11-gnb",
+    "title": "Gaussian Naive Bayes từ đầu",
+    "hint": "var = X[y==c].var(axis=0) + 1e-9 * X.var(axis=0).max() (giống scikit-learn). Log mật độ Gauss: −½log(2πσ²) − (x−μ)²/(2σ²).",
+    "starter": "def fit_gnb(X, y):\n    # Trả dict: classes, prior (C,), mean (C, d), var (C, d).\n    raise NotImplementedError\n\ndef predict_log_proba_gnb(model, X):\n    # Log hậu nghiệm đã chuẩn hóa, shape (n, C).\n    raise NotImplementedError\n",
+    "solution": "def fit_gnb(X, y):\n    classes = np.unique(y)\n    eps = 1e-9 * X.var(axis=0).max()\n    return {'classes': classes,\n            'prior': np.array([np.mean(y == c) for c in classes]),\n            'mean': np.array([X[y == c].mean(axis=0) for c in classes]),\n            'var': np.array([X[y == c].var(axis=0) + eps for c in classes])}\n\ndef predict_log_proba_gnb(model, X):\n    jll = np.log(model['prior']) - 0.5 * np.sum(np.log(2 * np.pi * model['var']), axis=1) \\\n          - 0.5 * (((X[:, None, :] - model['mean']) ** 2) / model['var']).sum(axis=2)\n    return jll - logsumexp(jll, axis=1, keepdims=True)\n",
+    "test": "_report('d11-gnb',\n    _check('Tham số khớp scikit-learn', lambda: ((lambda m: np.allclose(m['mean'], _ref11.theta_) and np.allclose(m['var'], _ref11.var_) and np.allclose(m['prior'], _ref11.class_prior_))(fit_gnb(X_tr, y_tr)), 'theta_, var_, class_prior_.')),\n    _check('Log hậu nghiệm khớp predict_log_proba', lambda: (np.allclose(predict_log_proba_gnb(fit_gnb(X_tr, y_tr), X_va), _ref11.predict_log_proba(X_va), atol=1e-6), 'Trên tập validation.')),\n)\n"
+   }
+  ]
+ },
+ {
+  "id": 12,
+  "title": "SVM: lề, hinge loss và kernel",
+  "projectTitle": "Titanic",
+  "goals": [
+   "Viết hàm mục tiêu SVM lề mềm ½‖w‖² + CΣmax(0, 1 − y(w·x + b))",
+   "Tính subgradient và huấn luyện bằng subgradient descent",
+   "Hiểu vai trò của C và vector hỗ trợ"
+  ],
+  "reads": [
+   "ISLR, Chương 9 Support Vector Machines, §9.1–9.3",
+   "Stanford CS229, Chương 6 (lề, bài toán đối ngẫu, kernel)",
+   "Vũ Hữu Tiệp, Machine Learning cơ bản, Chương 26–28 (SVM, lề mềm, hạt nhân)"
+  ],
+  "project": "Trên Titanic (đã xử lý thiếu và one-hot), so LinearSVC và SVC(kernel=\"rbf\") bằng cross-validation với C ∈ {0,1; 1; 10}. Ghi số vector hỗ trợ của SVC theo C.",
+  "questions": [
+   "C lớn nghĩa là gì?",
+   "Vì sao chỉ các vector hỗ trợ quyết định nghiệm?",
+   "Vì sao không phạt hệ số chặn b?"
+  ],
+  "answers": [
+   "Phạt vi phạm lề nặng hơn: lề hẹp lại, ít điểm vi phạm hơn, dễ quá khớp.",
+   "Điểm có y(w·x+b) > 1 có hinge = 0 và subgradient 0, nên dời chúng một chút không đổi nghiệm.",
+   "Phạt b làm ranh giới phụ thuộc vào vị trí gốc tọa độ; lề chỉ phụ thuộc ‖w‖."
+  ],
+  "steps": [
+   {
+    "line": "margin = y * (X @ w + b)",
+    "state": "X = [[2, 1], [1, 0,5], [0,5, −1]], y = [1, 1, −1], w = [1, 0,5], b = −0,5 → margin = [2, 0,75, 0,5]"
+   },
+   {
+    "line": "active = margin < 1",
+    "state": "active = [False, True, True]"
+   },
+   {
+    "line": "gw = w - C * (y[active, None] * X[active]).sum(0)",
+    "state": "C = 1 → gw = [1, 0,5] − ([1, 0,5] + [−0,5, 1]) = [0,5, −1]"
+   },
+   {
+    "line": "gb = -C * y[active].sum()",
+    "state": "gb = −(1 − 1) = 0"
+   },
+   {
+    "line": "w, b = w - lr*gw, b - lr*gb",
+    "state": "lr = 0,01"
+   }
+  ],
+  "setup": "import json, warnings\nfrom pathlib import Path\nimport numpy as np\nimport pandas as pd\nfrom sklearn.datasets import load_breast_cancer\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.preprocessing import StandardScaler\n\nDATA = next((p for p in (Path('data'), Path('../data')) if p.is_dir()), Path('data'))\n# Breast Cancer Wisconsin (Diagnostic), UCI, có sẵn trong scikit-learn. 569 mẫu, 30 đặc trưng.\n_bc = load_breast_cancer()\nX_bc = _bc.data\ny_bc = 1 - _bc.target   # 1 = ác tính (lớp cần phát hiện), 0 = lành tính\nfeature_names = list(_bc.feature_names)\n\ndef _check(name, fn):\n    try:\n        ok, detail = fn()\n    except NotImplementedError:\n        ok, detail = False, 'Chưa cài đặt (NotImplementedError)'\n    except Exception as error:\n        ok, detail = False, f'{type(error).__name__}: {error}'\n    return {'name': name, 'ok': bool(ok), 'detail': str(detail)}\n\ndef _report(ex_id, *checks):\n    print('__PY30__' + json.dumps({'id': ex_id, 'checks': list(checks)}, ensure_ascii=False))\n\n# Một phép chia dùng chung cho cả tuần: 70% train, 30% validation, phân tầng theo nhãn.\nidx_tr, idx_va = train_test_split(np.arange(len(y_bc)), test_size=0.3, random_state=0, stratify=y_bc)\n_scaler = StandardScaler().fit(X_bc[idx_tr])\nX_tr, X_va = _scaler.transform(X_bc[idx_tr]), _scaler.transform(X_bc[idx_va])\ny_tr, y_va = y_bc[idx_tr], y_bc[idx_va]\nfrom sklearn.svm import SVC\n_X12 = X_bc[:, [0, 1]]; _X12 = (_X12 - _X12.mean(0)) / _X12.std(0)\n_y12 = np.where(y_bc == 1, 1., -1.)\n_svc = SVC(kernel='linear', C=1.0).fit(_X12, _y12)\ndef _obj(w, b, X, y, C):\n    return 0.5 * w @ w + C * np.maximum(0, 1 - y * (X @ w + b)).sum()\n_ref12 = _obj(_svc.coef_[0], _svc.intercept_[0], _X12, _y12, 1.0)\ndef _sub_ok(fn):\n    w, b = np.array([.7, -.4]), .1\n    gw, gb = fn(w, b, _X12, _y12, 1.0)\n    eps = 1e-6\n    num_w = np.array([(_obj(w + eps*e, b, _X12, _y12, 1.) - _obj(w - eps*e, b, _X12, _y12, 1.)) / (2*eps) for e in np.eye(2)])\n    num_b = (_obj(w, b + eps, _X12, _y12, 1.) - _obj(w, b - eps, _X12, _y12, 1.)) / (2*eps)\n    return np.allclose(gw, num_w, atol=1e-4) and np.isclose(gb, num_b, atol=1e-4)\n",
+  "exercises": [
+   {
+    "id": "d12-svm",
+    "title": "Hinge loss, subgradient và huấn luyện SVM tuyến tính",
+    "hint": "Chỉ các điểm có y(w·x + b) < 1 đóng góp vào subgradient. Dùng learning rate giảm dần lr0/√t và giữ lại nghiệm có mục tiêu nhỏ nhất.",
+    "starter": "def svm_objective(w, b, X, y, C):\n    # y ∈ {-1, +1}. Trả 0.5*||w||^2 + C * tổng hinge.\n    raise NotImplementedError\n\ndef svm_subgrad(w, b, X, y, C):\n    # Trả (gw, gb).\n    raise NotImplementedError\n\ndef train_svm(X, y, C, steps=3000, lr0=0.01):\n    # Subgradient descent từ w = 0, b = 0; trả (w, b) có mục tiêu nhỏ nhất đã gặp.\n    raise NotImplementedError\n",
+    "solution": "def svm_objective(w, b, X, y, C):\n    return 0.5 * w @ w + C * np.maximum(0, 1 - y * (X @ w + b)).sum()\n\ndef svm_subgrad(w, b, X, y, C):\n    active = y * (X @ w + b) < 1\n    gw = w - C * (y[active, None] * X[active]).sum(axis=0)\n    gb = -C * y[active].sum()\n    return gw, gb\n\ndef train_svm(X, y, C, steps=3000, lr0=0.01):\n    w, b = np.zeros(X.shape[1]), 0.0\n    best = (svm_objective(w, b, X, y, C), w.copy(), b)\n    for t in range(1, steps + 1):\n        gw, gb = svm_subgrad(w, b, X, y, C)\n        lr = lr0 / np.sqrt(t)\n        w, b = w - lr * gw, b - lr * gb\n        value = svm_objective(w, b, X, y, C)\n        if value < best[0]:\n            best = (value, w.copy(), b)\n    return best[1], best[2]\n",
+    "test": "_report('d12-svm',\n    _check('Hàm mục tiêu đúng', lambda: (np.isclose(svm_objective(np.array([1., -2.]), .5, np.array([[1., 0.], [0., 1.], [2., 2.]]), np.array([1., -1., 1.]), 2.), 2.5 + 2 * (0.0 + 0.0 + 2.5)), 'Ví dụ 3 điểm tính tay.')),\n    _check('Subgradient khớp sai phân tại điểm không gấp khúc', lambda: (_sub_ok(svm_subgrad), 'Tại w = [0,7, −0,4], b = 0,1.')),\n    _check('Mục tiêu sau huấn luyện ≤ 1,02 × SVC(kernel=\"linear\")', lambda: ((lambda wb: svm_objective(wb[0], wb[1], _X12, _y12, 1.0) <= 1.02 * _ref12)(train_svm(_X12, _y12, 1.0)), f'Mục tiêu tham chiếu {_ref12:.3f}.')),\n)\n"
+   }
+  ]
+ },
+ {
+  "id": 13,
+  "title": "Cross-validation, rò rỉ và Pipeline",
+  "projectTitle": "Titanic",
+  "goals": [
+   "Cài k-fold và stratified k-fold có seed",
+   "Thấy rò rỉ khi chọn đặc trưng trên toàn bộ dữ liệu trước khi chia fold",
+   "Đặt mọi bước fit vào bên trong từng fold"
+  ],
+  "reads": [
+   "ISLR, §5.1.3 k-Fold Cross-Validation; §5.1.4 Bias-Variance Trade-Off for k-Fold",
+   "Stanford CS229, §9.3 Model selection via cross validation",
+   "Hastie, Tibshirani & Friedman, ESL, §7.10.2 The Wrong and Right Way to Do Cross-validation (ngoài thư mục)"
+  ],
+  "project": "Trên Titanic, dựng Pipeline(ColumnTransformer + LogisticRegression) và so điểm cross-validation khi chuẩn hóa trong pipeline với khi chuẩn hóa toàn bộ trước. Ghi chênh lệch và giải thích.",
+  "questions": [
+   "Vì sao điểm của cấu hình tốt nhất trong grid search là ước lượng lạc quan?",
+   "Stratified k-fold giải quyết vấn đề gì?",
+   "Nested CV 5×3 với 10 cấu hình cần bao nhiêu lần fit (không tính lần fit cuối)?"
+  ],
+  "answers": [
+   "Chọn giá trị lớn nhất trong nhiều điểm có nhiễu sẽ thiên lên, giống thí nghiệm chọn mô hình ngẫu nhiên ngày 2.",
+   "Giữ tỉ lệ lớp ở mỗi fold gần tỉ lệ toàn bộ, nhất là khi một lớp hiếm.",
+   "5 fold ngoài × (10 cấu hình × 3 fold trong + 1 lần fit lại cấu hình tốt nhất) = 155."
+  ],
+  "steps": [
+   {
+    "line": "folds = stratified_kfold_indices(y, k=5, seed)",
+    "state": "mỗi fold ≈ 114 mẫu, ~37% ác tính"
+   },
+   {
+    "line": "cols = select_top(X[train], y[train], m)",
+    "state": "chỉ dùng train của fold"
+   },
+   {
+    "line": "model = centroid_fit(X[train][:, cols], y[train])",
+    "state": "tâm hai lớp"
+   },
+   {
+    "line": "acc = mean(centroid_predict(model, X[val][:, cols]) == y[val])",
+    "state": "accuracy của fold đang xét"
+   },
+   {
+    "line": "score = np.mean(accs)",
+    "state": "trung bình 5 fold"
+   }
+  ],
+  "setup": "import json, warnings\nfrom pathlib import Path\nimport numpy as np\nimport pandas as pd\nfrom sklearn.datasets import load_breast_cancer\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.preprocessing import StandardScaler\n\nDATA = next((p for p in (Path('data'), Path('../data')) if p.is_dir()), Path('data'))\n# Breast Cancer Wisconsin (Diagnostic), UCI, có sẵn trong scikit-learn. 569 mẫu, 30 đặc trưng.\n_bc = load_breast_cancer()\nX_bc = _bc.data\ny_bc = 1 - _bc.target   # 1 = ác tính (lớp cần phát hiện), 0 = lành tính\nfeature_names = list(_bc.feature_names)\n\ndef _check(name, fn):\n    try:\n        ok, detail = fn()\n    except NotImplementedError:\n        ok, detail = False, 'Chưa cài đặt (NotImplementedError)'\n    except Exception as error:\n        ok, detail = False, f'{type(error).__name__}: {error}'\n    return {'name': name, 'ok': bool(ok), 'detail': str(detail)}\n\ndef _report(ex_id, *checks):\n    print('__PY30__' + json.dumps({'id': ex_id, 'checks': list(checks)}, ensure_ascii=False))\n\n# Một phép chia dùng chung cho cả tuần: 70% train, 30% validation, phân tầng theo nhãn.\nidx_tr, idx_va = train_test_split(np.arange(len(y_bc)), test_size=0.3, random_state=0, stratify=y_bc)\n_scaler = StandardScaler().fit(X_bc[idx_tr])\nX_tr, X_va = _scaler.transform(X_bc[idx_tr]), _scaler.transform(X_bc[idx_va])\ny_tr, y_va = y_bc[idx_tr], y_bc[idx_va]\ndef select_top(X, y, m):\n    \"\"\"Chỉ số m cột có |tương quan| với y lớn nhất.\"\"\"\n    Xc, yc = X - X.mean(0), y - y.mean()\n    corr = (Xc * yc[:, None]).sum(0) / (np.sqrt((Xc ** 2).sum(0) * (yc ** 2).sum()) + 1e-12)\n    return np.argsort(-np.abs(corr))[:m]\ndef centroid_fit(X, y):\n    return np.array([X[y == c].mean(0) for c in (0, 1)])\ndef centroid_predict(centers, X):\n    return ((X[:, None, :] - centers[None]) ** 2).sum(2).argmin(1)\ndef _partition_ok(folds, n):\n    vals = np.concatenate([v for _, v in folds])\n    sizes = [len(v) for _, v in folds]\n    return (np.array_equal(np.sort(vals), np.arange(n)) and max(sizes) - min(sizes) <= 1\n            and all(np.array_equal(np.sort(np.r_[t, v]), np.arange(n)) and not set(t) & set(v) for t, v in folds))\n_ys = np.r_[np.zeros(83, int), np.ones(17, int)]\ndef _strat_ok(fn):\n    folds = fn(_ys, 5, 0)\n    return _partition_ok(folds, 100) and all(abs(_ys[v].sum() - 17 / 5) <= 1 for _, v in folds)\ndef _noise(seed):\n    r = np.random.default_rng(seed)\n    return r.normal(size=(50, 1000)), np.r_[np.zeros(25, int), np.ones(25, int)]\ndef leaky_cv(X, y, k, m, seed):\n    cols = select_top(X, y, m)   # SAI: chọn cột trên toàn bộ dữ liệu\n    accs = []\n    for tr, va in kfold_indices(len(y), k, seed):\n        accs.append(np.mean(centroid_predict(centroid_fit(X[tr][:, cols], y[tr]), X[va][:, cols]) == y[va]))\n    return float(np.mean(accs))\n",
+  "exercises": [
+   {
+    "id": "d13-kfold",
+    "title": "k-fold và stratified k-fold",
+    "hint": "kfold: hoán vị chỉ số theo seed rồi np.array_split thành k phần. Stratified: xáo trộn riêng từng lớp, nối lại theo lớp, rồi gán fold = vị trí % k để mọi fold có cỡ gần bằng nhau và cùng tỉ lệ lớp.",
+    "starter": "def kfold_indices(n, k, seed):\n    # Trả list k cặp (train_idx, val_idx).\n    raise NotImplementedError\n\ndef stratified_kfold_indices(y, k, seed):\n    raise NotImplementedError\n",
+    "solution": "def kfold_indices(n, k, seed):\n    parts = np.array_split(np.random.default_rng(seed).permutation(n), k)\n    return [(np.concatenate(parts[:i] + parts[i+1:]), parts[i]) for i in range(k)]\n\ndef stratified_kfold_indices(y, k, seed):\n    y = np.asarray(y)\n    rng = np.random.default_rng(seed)\n    order = np.concatenate([rng.permutation(np.where(y == c)[0]) for c in np.unique(y)])\n    fold = np.empty(len(y), dtype=int)\n    fold[order] = np.arange(len(y)) % k        # chia vòng tròn: lớp nào cũng rải đều các fold\n    return [(np.where(fold != i)[0], np.where(fold == i)[0]) for i in range(k)]\n",
+    "test": "_report('d13-kfold',\n    _check('k-fold phủ đủ, rời nhau, cỡ chênh ≤ 1', lambda: (_partition_ok(kfold_indices(103, 5, 0), 103), 'n = 103, k = 5.')),\n    _check('k-fold có xáo trộn theo seed', lambda: (not np.array_equal(kfold_indices(50, 5, 0)[0][1], np.arange(10)) and not np.array_equal(kfold_indices(50, 5, 0)[0][1], kfold_indices(50, 5, 1)[0][1]), 'Fold đầu không phải 10 chỉ số đầu.')),\n    _check('Stratified giữ tỉ lệ lớp hiếm', lambda: (_strat_ok(stratified_kfold_indices), '17 mẫu dương trên 100, mỗi fold 3–4 mẫu dương.')),\n)\n"
+   },
+   {
+    "id": "d13-honest",
+    "title": "Cross-validation không rò rỉ",
+    "hint": "Gọi select_top bên trong vòng lặp fold, chỉ với X[train], y[train]. Dùng kfold_indices của bài trên.",
+    "starter": "def honest_cv(X, y, k, m, seed):\n    # Chọn m cột trong từng fold (chỉ dùng train), fit centroid, trả accuracy trung bình.\n    raise NotImplementedError\n",
+    "solution": "def honest_cv(X, y, k, m, seed):\n    accs = []\n    for tr, va in kfold_indices(len(y), k, seed):\n        cols = select_top(X[tr], y[tr], m)\n        accs.append(np.mean(centroid_predict(centroid_fit(X[tr][:, cols], y[tr]), X[va][:, cols]) == y[va]))\n    return float(np.mean(accs))\n",
+    "test": "kfold_indices = globals().get('kfold_indices') or (lambda n, k, seed: [(np.concatenate(p[:i] + p[i+1:]), p[i]) for p in [np.array_split(np.random.default_rng(seed).permutation(n), k)] for i in range(k)])\n_report('d13-honest',\n    _check('Trên dữ liệu nhiễu thuần, điểm quanh mức đoán mò', lambda: (0.3 <= np.mean([honest_cv(*_noise(s), 5, 20, s) for s in range(3)]) <= 0.7, 'Nhãn độc lập với 1000 cột nhiễu; bản rò rỉ cho > 0,8.')),\n    _check('Trên dữ liệu thật vẫn học được', lambda: (honest_cv(X_bc, y_bc, 5, 5, 0) > 0.85, 'Breast Cancer, 5 cột.')),\n)\n"
+   }
+  ]
+ },
+ {
+  "id": 14,
+  "title": "Dự án P2: Titanic",
+  "projectTitle": "Titanic",
+  "goals": [
+   "Dựng Pipeline xử lý thiếu, one-hot, chuẩn hóa và mô hình trong một đối tượng",
+   "Đánh giá bằng stratified 5-fold có seed, không rò rỉ",
+   "Xuất submission đúng định dạng Kaggle"
+  ],
+  "reads": [
+   "Pedregosa et al. (2011), Scikit-learn: Machine Learning in Python, JMLR 12",
+   "ISLR, §5.1 (ôn) và §4.5"
+  ],
+  "project": "Tải Titanic, dùng make_titanic_pipeline với cột số [Age, Fare, SibSp, Parch] và cột phân loại [Sex, Pclass, Embarked]. Chọn C bằng cv_accuracy, rồi chạy export_titanic(make_titanic_pipeline, C) để ghi titanic_submission.csv và tự nộp trên Kaggle. Báo cáo: bảng C → accuracy CV (trung bình ± độ lệch), điểm Kaggle, ba ca dự đoán sai và giả thuyết vì sao.",
+  "questions": [
+   "Bước nào trong pipeline phải fit lại trong từng fold?",
+   "handle_unknown=\"ignore\" giải quyết vấn đề gì?",
+   "Điểm trên bảng xếp hạng Kaggle có dùng để chọn C được không?"
+  ],
+  "answers": [
+   "Mọi bước có fit: imputer, one-hot, scaler và mô hình; pipeline bảo đảm điều đó khi đưa vào cross_val_score.",
+   "Giá trị phân loại mới xuất hiện ở test (chưa thấy khi fit) được mã hóa toàn 0 thay vì báo lỗi.",
+   "Không nên: dùng nhiều lần thì bảng xếp hạng thành tập validation và điểm bị thổi phồng; chọn bằng CV trên train."
+  ],
+  "steps": [
+   {
+    "line": "num = Pipeline([imputer(median), StandardScaler()])",
+    "state": "Age thiếu → median của fold train"
+   },
+   {
+    "line": "cat = Pipeline([imputer(most_frequent), OneHotEncoder(handle_unknown=\"ignore\")])",
+    "state": "Sex, Pclass, Embarked → 8 cột"
+   },
+   {
+    "line": "pre = ColumnTransformer([(\"num\", num, numeric), (\"cat\", cat, categorical)])",
+    "state": "tổng 12 cột"
+   },
+   {
+    "line": "pipe = Pipeline([(\"pre\", pre), (\"clf\", LogisticRegression(C=C))])",
+    "state": "chưa fit"
+   },
+   {
+    "line": "cross_val_score(pipe, X, y, cv=StratifiedKFold(5, shuffle=True, random_state=seed))",
+    "state": "fit lại toàn bộ pipeline trong từng fold"
+   }
+  ],
+  "setup": "import json, warnings\nfrom pathlib import Path\nimport numpy as np\nimport pandas as pd\nfrom sklearn.datasets import load_breast_cancer\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.preprocessing import StandardScaler\n\nDATA = next((p for p in (Path('data'), Path('../data')) if p.is_dir()), Path('data'))\n# Breast Cancer Wisconsin (Diagnostic), UCI, có sẵn trong scikit-learn. 569 mẫu, 30 đặc trưng.\n_bc = load_breast_cancer()\nX_bc = _bc.data\ny_bc = 1 - _bc.target   # 1 = ác tính (lớp cần phát hiện), 0 = lành tính\nfeature_names = list(_bc.feature_names)\n\ndef _check(name, fn):\n    try:\n        ok, detail = fn()\n    except NotImplementedError:\n        ok, detail = False, 'Chưa cài đặt (NotImplementedError)'\n    except Exception as error:\n        ok, detail = False, f'{type(error).__name__}: {error}'\n    return {'name': name, 'ok': bool(ok), 'detail': str(detail)}\n\ndef _report(ex_id, *checks):\n    print('__PY30__' + json.dumps({'id': ex_id, 'checks': list(checks)}, ensure_ascii=False))\n\n# Một phép chia dùng chung cho cả tuần: 70% train, 30% validation, phân tầng theo nhãn.\nidx_tr, idx_va = train_test_split(np.arange(len(y_bc)), test_size=0.3, random_state=0, stratify=y_bc)\n_scaler = StandardScaler().fit(X_bc[idx_tr])\nX_tr, X_va = _scaler.transform(X_bc[idx_tr]), _scaler.transform(X_bc[idx_va])\ny_tr, y_va = y_bc[idx_tr], y_bc[idx_va]\nfrom sklearn.base import clone\nfrom sklearn.exceptions import NotFittedError\nfrom sklearn.model_selection import StratifiedKFold, cross_val_score\nfrom sklearn.utils.validation import check_is_fitted\nNUMERIC, CATEGORICAL = ['Age', 'Fare', 'SibSp', 'Parch'], ['Sex', 'Pclass', 'Embarked']\ndef _titanic_like(n, seed):\n    \"\"\"Bảng giả lập cùng cấu trúc cột với Titanic (không phải dữ liệu thật) để kiểm tra pipeline.\"\"\"\n    r = np.random.default_rng(seed)\n    df = pd.DataFrame({'Age': r.normal(30, 12, n).round(), 'Fare': r.gamma(2, 15, n).round(2), 'SibSp': r.integers(0, 4, n), 'Parch': r.integers(0, 3, n),\n                       'Sex': r.choice(['male', 'female'], n), 'Pclass': r.choice([1, 2, 3], n), 'Embarked': r.choice(['S', 'C', 'Q'], n)})\n    logit = -1 + 2.2 * (df.Sex == 'female') - .7 * (df.Pclass - 2) - .02 * (df.Age - 30)\n    y = (r.random(n) < 1 / (1 + np.exp(-logit))).astype(int)\n    df.loc[r.random(n) < .2, 'Age'] = np.nan\n    df.loc[r.random(n) < .05, 'Embarked'] = np.nan\n    return df, y\n_df14, _y14 = _titanic_like(300, 14)\n_test14 = _df14.head(5).copy(); _test14.loc[_test14.index[0], 'Embarked'] = 'X'; _test14.loc[_test14.index[1], 'Age'] = np.nan\ndef _unfitted(pipe):\n    try:\n        check_is_fitted(pipe)\n        return False\n    except NotFittedError:\n        return True\ndef _ref_cv(make, C, seed):\n    return cross_val_score(make(NUMERIC, CATEGORICAL, C), _df14, _y14, cv=StratifiedKFold(5, shuffle=True, random_state=seed)).mean()\ndef export_titanic(make, C=1.0):\n    folder = DATA / 'kaggle/titanic'\n    train, test = pd.read_csv(folder / 'train.csv'), pd.read_csv(folder / 'test.csv')\n    pipe = make(NUMERIC, CATEGORICAL, C).fit(train[NUMERIC + CATEGORICAL], train.Survived)\n    out = pd.DataFrame({'PassengerId': test.PassengerId, 'Survived': pipe.predict(test[NUMERIC + CATEGORICAL])})\n    out.to_csv('titanic_submission.csv', index=False)\n    return out\n",
+  "exercises": [
+   {
+    "id": "d14-pipeline",
+    "title": "Pipeline Titanic và cross-validation",
+    "hint": "SimpleImputer(strategy=\"median\") + StandardScaler cho cột số; SimpleImputer(strategy=\"most_frequent\") + OneHotEncoder(handle_unknown=\"ignore\") cho cột phân loại; LogisticRegression(C=C, max_iter=1000). cv_accuracy dùng StratifiedKFold(5, shuffle=True, random_state=seed).",
+    "starter": "from sklearn.compose import ColumnTransformer\nfrom sklearn.impute import SimpleImputer\nfrom sklearn.pipeline import Pipeline\nfrom sklearn.preprocessing import OneHotEncoder\n\ndef make_titanic_pipeline(numeric, categorical, C=1.0):\n    # Trả Pipeline CHƯA fit.\n    raise NotImplementedError\n\ndef cv_accuracy(make, X, y, C, seed):\n    # Accuracy trung bình của stratified 5-fold (shuffle=True, random_state=seed).\n    raise NotImplementedError\n",
+    "solution": "from sklearn.compose import ColumnTransformer\nfrom sklearn.impute import SimpleImputer\nfrom sklearn.pipeline import Pipeline\nfrom sklearn.preprocessing import OneHotEncoder\n\ndef make_titanic_pipeline(numeric, categorical, C=1.0):\n    num = Pipeline([('impute', SimpleImputer(strategy='median')), ('scale', StandardScaler())])\n    cat = Pipeline([('impute', SimpleImputer(strategy='most_frequent')), ('onehot', OneHotEncoder(handle_unknown='ignore'))])\n    pre = ColumnTransformer([('num', num, numeric), ('cat', cat, categorical)])\n    return Pipeline([('pre', pre), ('clf', LogisticRegression(C=C, max_iter=1000))])\n\ndef cv_accuracy(make, X, y, C, seed):\n    cv = StratifiedKFold(5, shuffle=True, random_state=seed)\n    return float(cross_val_score(make(NUMERIC, CATEGORICAL, C), X, y, cv=cv).mean())\n",
+    "test": "_report('d14-pipeline',\n    _check('Trả pipeline chưa fit', lambda: (_unfitted(make_titanic_pipeline(NUMERIC, CATEGORICAL)), 'Fit để cross_val_score làm trong từng fold.')),\n    _check('Chịu được giá trị thiếu và nhãn mới ở test', lambda: (len(make_titanic_pipeline(NUMERIC, CATEGORICAL).fit(_df14, _y14).predict(_test14)) == 5, 'Embarked = \"X\" chưa từng gặp, Age bị thiếu.')),\n    _check('cv_accuracy khớp stratified 5-fold tham chiếu', lambda: (np.isclose(cv_accuracy(make_titanic_pipeline, _df14, _y14, .5, 3), _ref_cv(make_titanic_pipeline, .5, 3)), 'C = 0,5, seed = 3.')),\n)\n"
+   }
+  ]
+ }
+]

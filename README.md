@@ -1,0 +1,51 @@
+# ML Studio · Python → ML 30 ngày
+
+Web app học Machine Learning cho người đã vững Python: trực quan hóa thuật toán, mô phỏng code từng dòng, bài tập chấm tự động chạy trên kernel Jupyter ở máy bạn, dự án Kaggle, và PyTorch ở tuần 4.
+
+- **Bản web (GitHub Pages):** https://trangiahuy8444.github.io/ML-Studio/ (sau khi bật Pages, xem bên dưới).
+- **Đã có:** tuần 1–4 (Ngày 1–28). Tuần 5 (dự án tổng kết, Ngày 29–30) đang soạn.
+
+## Cấu trúc
+
+| Thư mục | Nội dung |
+|---|---|
+| `ml-studio-react/` | Mã nguồn web (React 19 + TypeScript + Vite). Nội dung lộ trình ở `src/track-py/week*.json`, sinh từ `scripts/gen_week*.py`. |
+| `linear-regression-lab/` | Launcher Jupyter cục bộ (`start_jupyter_studio.py`, `Mo_Jupyter_Studio.command`) và notebook của khóa học. |
+| `linear-regression-lab/py30/` | Notebook bài tập `Ngay_01–28.ipynb`, bộ kiểm tra `verify_py30.py`, lời giải sai cố ý `wrong_cases.py`, notebook GPU cho Kaggle/Colab trong `cloud/`. |
+
+## Bật GitHub Pages (chỉ làm một lần)
+
+Vào **Settings → Pages → Build and deployment → Source** và chọn **GitHub Actions**. Mỗi lần push lên `main`, workflow `.github/workflows/pages.yml` sẽ chạy test, build và đăng trang.
+
+Trên GitHub Pages, phần bài học, mô phỏng và bản đồ thuật toán chạy được ngay. **Ô bài tập chấm bằng Jupyter cần kernel trên máy bạn**: launcher chỉ cấp token cho trang mở từ `localhost`, nên để làm bài hãy chạy web qua launcher như dưới đây.
+
+## Chạy trên máy (có bài tập chấm tự động)
+
+```bash
+cd ml-studio-react
+npm ci
+npm run build
+cp -R dist ../linear-regression-lab/dist
+cd ../linear-regression-lab
+python3 -m pip install -r requirements-py30.txt   # Ngày 24–28 cần PyTorch; chạy được trên CPU
+python3 start_jupyter_studio.py                   # trên Mac có thể mở Mo_Jupyter_Studio.command
+```
+
+Mở địa chỉ launcher in ra, vào mục **Python → ML 30 ngày**, bấm **Kết nối** trong trang của từng ngày.
+
+## Kiểm tra
+
+```bash
+cd ml-studio-react && npm test                    # 65 bài test nội dung và giao thức
+cd ../linear-regression-lab
+python3 py30/verify_py30.py                       # 181 trường hợp: khung chưa làm, lời giải, lời giải sai
+```
+
+## Dữ liệu và bản quyền
+
+- Có sẵn trong repo: Real estate valuation (UCI, `py30/data/real_estate.csv`, xem `NGUON.md`); các bộ trong scikit-learn (Breast Cancer Wisconsin, Iris, Digits, Diabetes) được tải qua thư viện.
+- **Không có trong repo:** dữ liệu Kaggle (House Prices, Titanic, Digit Recognizer, Credit Card Fraud, IMDB). Tự tải bằng `python py30/download_data.py <tên>` sau khi chấp nhận luật cuộc thi.
+
+## Bảo mật
+
+Không commit `kaggle.json`. Token Kaggle chỉ đặt ở `~/.kaggle/kaggle.json` (chmod 600) trên máy bạn, hoặc trong Colab Secrets. `.gitignore` đã chặn tệp này, dữ liệu Kaggle và thư mục bài làm `py30/bai_lam/`.

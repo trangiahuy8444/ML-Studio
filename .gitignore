@@ -1,0 +1,25 @@
+# Bí mật: KHÔNG BAO GIỜ commit token Kaggle hay biến môi trường
+kaggle.json
+**/kaggle.json
+.kaggle/
+.env
+.env.*
+
+# Dữ liệu tải từ Kaggle (luật cuộc thi hạn chế phân phối lại) và bài làm cá nhân
+linear-regression-lab/py30/data/kaggle/
+linear-regression-lab/py30/bai_lam/
+**/*_submission.csv
+**/submission.csv
+
+# Bản build và phụ thuộc
+node_modules/
+ml-studio-react/dist/
+linear-regression-lab/dist/
+ml-studio-react/ML_Studio_React.html
+*.tsbuildinfo
+*.zip
+
+# Python, Jupyter, hệ điều hành
+__pycache__/
+**/.ipynb_checkpoints/
+.DS_Store

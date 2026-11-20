@@ -1,0 +1,399 @@
+[
+ {
+  "id": 1,
+  "title": "NumPy cho Machine Learning",
+  "goals": [
+   "Đọc shape từ phải sang trái",
+   "Chuẩn hóa từng cột và vector hóa khoảng cách"
+  ],
+  "reads": [
+   "Vũ Hữu Tiệp, Machine Learning cơ bản, Chương 1 (Ôn tập Đại số tuyến tính), mục 1.1–1.3",
+   "Harris et al. (2020), Array programming with NumPy, Nature 585 — mục về broadcasting",
+   "UC Berkeley CS189, Lecture 02 \"Data Tools\""
+  ],
+  "project": "Khảo sát cột số trên UCI Real Estate. Vẽ phân bố giá và ghi đơn vị 10.000 TWD/ping. Sau đó tải House Prices và so danh sách cột số, định danh và mục tiêu.",
+  "questions": [
+   "(3, 1) cộng (1, 2) cho shape gì?",
+   "axis=0 giữ thống kê theo cột hay dòng?",
+   "Cột hằng sau chuẩn hóa nên có giá trị gì?"
+  ],
+  "answers": [
+   "(3, 2)",
+   "Theo cột",
+   "0"
+  ],
+  "steps": [
+   {
+    "line": "X = [[2,5],[4,5],[6,5]]",
+    "state": "X.shape = (3, 2)"
+   },
+   {
+    "line": "mu = X.mean(axis=0)",
+    "state": "mu = [4, 5]"
+   },
+   {
+    "line": "sigma = X.std(axis=0)",
+    "state": "sigma ≈ [1,633; 0]"
+   },
+   {
+    "line": "safe = where(sigma == 0, 1, sigma)",
+    "state": "safe ≈ [1,633; 1]"
+   },
+   {
+    "line": "Z = (X - mu) / safe",
+    "state": "Z ≈ [[−1,225; 0], [0; 0], [1,225; 0]]"
+   }
+  ],
+  "setup": "import json\nfrom pathlib import Path\nimport numpy as np\nimport pandas as pd\nfrom sklearn.linear_model import LinearRegression, Ridge\n\nDATA = next((p for p in (Path('data'), Path('../data')) if (p/'real_estate.csv').is_file()), None)\nif DATA is None:\n    raise FileNotFoundError('Mở notebook mẫu từ thư mục py30 hoặc bai_lam.')\nreal_estate = pd.read_csv(DATA / 'real_estate.csv')\n\ndef _check(name, fn):\n    try:\n        ok, detail = fn()\n    except NotImplementedError:\n        ok, detail = False, 'Chưa cài đặt (NotImplementedError)'\n    except Exception as error:\n        ok, detail = False, f'{type(error).__name__}: {error}'\n    return {'name': name, 'ok': bool(ok), 'detail': str(detail)}\n\ndef _report(ex_id, *checks):\n    print('__PY30__' + json.dumps({'id': ex_id, 'checks': list(checks)}, ensure_ascii=False))\nimport ast, inspect\n_A = np.array([[1., 2.], [-3., 4.]])\n_B = np.array([[2., 2.], [7., 0.], [0., 0.]])\n_loop_dist = np.array([[sum((a - b)**2) for b in _B] for a in _A])\ndef _preserves_input(fn):\n    x = np.array([[2., 5.], [4., 5.]])\n    original = x.copy()\n    fn(x)\n    return np.array_equal(x, original)\ndef _no_loops(fn):\n    forbidden = (ast.For, ast.While, ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)\n    return not any(isinstance(node, forbidden) for node in ast.walk(ast.parse(inspect.getsource(fn))))\n\n_R = np.random.default_rng(0).normal([3., -2., 10.], [2., .5, 7.], size=(50, 3))\n",
+  "exercises": [
+   {
+    "id": "d1-standardize",
+    "title": "Chuẩn hóa từng cột",
+    "hint": "Dùng X.std(axis=0) (ddof=0). Thay mẫu số 0 bằng 1 trước khi chia.",
+    "starter": "def standardize(X):\n    raise NotImplementedError\n",
+    "solution": "def standardize(X):\n    X = np.asarray(X, dtype=float)\n    mu = X.mean(axis=0)\n    sd = X.std(axis=0)\n    return (X - mu) / np.where(sd == 0, 1, sd)\n",
+    "test": "_report('d1-standardize',\n    _check('Mỗi cột có trung bình 0, độ lệch chuẩn 1', lambda: (np.allclose(standardize(_R).mean(0), 0) and np.allclose(standardize(_R).std(0), 1), 'Dữ liệu ngẫu nhiên 50×3, độ lệch chuẩn quần thể (ddof=0).')),\n    _check('Cột hằng về 0', lambda: (np.allclose(standardize(np.array([[2., 5.], [4., 5.]])), [[-1, 0], [1, 0]]), 'Cột 1 thay đổi, cột 2 hằng.')),\n    _check('Không sửa dữ liệu đầu vào', lambda: (_preserves_input(standardize), 'So sánh X trước và sau khi gọi hàm.')),\n)\n"
+   },
+   {
+    "id": "d1-distance",
+    "title": "Khoảng cách bình phương giữa hai nhóm",
+    "hint": "Dùng A[:, None, :] và B[None, :, :], rồi giảm chiều đặc trưng.",
+    "starter": "def pairwise_sq_dists(A, B):\n    raise NotImplementedError\n",
+    "solution": "def pairwise_sq_dists(A, B):\n    return ((np.asarray(A)[:, None, :] - np.asarray(B)[None, :, :]) ** 2).sum(axis=2)\n",
+    "test": "_report('d1-distance',\n    _check('Khớp vòng lặp trên hai nhóm khác kích thước', lambda: (np.allclose(pairwise_sq_dists(_A, _B), _loop_dist), 'Một hàng của A ứng với mọi hàng của B.')),\n    _check('Vector hóa trong thân hàm', lambda: (_no_loops(pairwise_sq_dists), 'Tránh các vòng lặp và biểu thức comprehension.')),\n)\n"
+   }
+  ]
+ },
+ {
+  "id": 2,
+  "title": "Chia tập và rò rỉ dữ liệu",
+  "goals": [
+   "Tách train, validation và test",
+   "Fit chuẩn hóa bằng train"
+  ],
+  "reads": [
+   "ISLR, §2.2.3 và §5.1",
+   "UC Berkeley CS189, Data Tools"
+  ],
+  "project": "Khảo sát cột với train House Prices. Viết quy tắc chia trước khi lựa chọn đặc trưng. Giữ tập test cuối không dùng để chọn mô hình.",
+  "questions": [
+   "Tập nào dùng để chọn mô hình?",
+   "Vì sao fit scaler trên cả bảng là rò rỉ?",
+   "Seed ảnh hưởng điều gì?"
+  ],
+  "answers": [
+   "Validation",
+   "Thống kê từ ngoài tập train đi vào huấn luyện",
+   "Thứ tự ngẫu nhiên có thể tái lập"
+  ],
+  "steps": [
+   {
+    "line": "n, n_val, n_test = 10, 2, 2",
+    "state": "Train cần 6 chỉ số"
+   },
+   {
+    "line": "order = permutation(n)",
+    "state": "Ví dụ order = [4,6,2,7,3,5,9,0,8,1]"
+   },
+   {
+    "line": "train = order[:6]",
+    "state": "train = [4,6,2,7,3,5]"
+   },
+   {
+    "line": "val, test = order[6:8], order[8:]",
+    "state": "val = [9,0], test = [8,1]"
+   }
+  ],
+  "setup": "import json\nfrom pathlib import Path\nimport numpy as np\nimport pandas as pd\nfrom sklearn.linear_model import LinearRegression, Ridge\n\nDATA = next((p for p in (Path('data'), Path('../data')) if (p/'real_estate.csv').is_file()), None)\nif DATA is None:\n    raise FileNotFoundError('Mở notebook mẫu từ thư mục py30 hoặc bai_lam.')\nreal_estate = pd.read_csv(DATA / 'real_estate.csv')\n\ndef _check(name, fn):\n    try:\n        ok, detail = fn()\n    except NotImplementedError:\n        ok, detail = False, 'Chưa cài đặt (NotImplementedError)'\n    except Exception as error:\n        ok, detail = False, f'{type(error).__name__}: {error}'\n    return {'name': name, 'ok': bool(ok), 'detail': str(detail)}\n\ndef _report(ex_id, *checks):\n    print('__PY30__' + json.dumps({'id': ex_id, 'checks': list(checks)}, ensure_ascii=False))\ndef _partition(fn):\n    parts = fn(20,4,3,7)\n    return list(map(len,parts)) == [13,4,3] and np.array_equal(np.sort(np.concatenate(parts)), np.arange(20))\ndef _no_leak(fn):\n    X=np.array([[1.,4.],[3.,4.],[101.,4.],[1001.,4.]])\n    a,b,c,mu = fn(X,[0,1],[2],[3])\n    return np.allclose(mu,[2,4]) and np.allclose(a,[[-1,0],[1,0]]) and np.allclose(b,[[99,0]]) and np.allclose(c,[[999,0]])\n\ndef _shuffled(fn):\n    a = np.concatenate(fn(40, 8, 8, 1)); b = np.concatenate(fn(40, 8, 8, 2))\n    return not np.array_equal(a, np.arange(40)) and not np.array_equal(a, b)\n",
+  "exercises": [
+   {
+    "id": "d2-split",
+    "title": "Chia các chỉ số",
+    "hint": "Dùng một hoán vị duy nhất. val và test là số mẫu nguyên.",
+    "starter": "def train_val_test_split(n, val, test, seed):\n    raise NotImplementedError\n",
+    "solution": "def train_val_test_split(n, val, test, seed):\n    if min(val, test) < 0 or val + test >= n:\n        raise ValueError('Số mẫu không hợp lệ.')\n    order = np.random.default_rng(seed).permutation(n)\n    end = n - val - test\n    return order[:end], order[end:end+val], order[end+val:]\n",
+    "test": "_report('d2-split',\n    _check('Rời nhau, phủ toàn bộ mẫu', lambda: (_partition(train_val_test_split), 'Kiểm tra độ dài và mọi chỉ số.')),\n    _check('Cùng seed cho cùng ba tập', lambda: (all(np.array_equal(a,b) for a,b in zip(train_val_test_split(20,4,3,7),train_val_test_split(20,4,3,7))), 'Dùng seed đã nhận.')),\n    _check('Có xáo trộn và seed khác cho kết quả khác', lambda: (_shuffled(train_val_test_split), 'Không cắt theo thứ tự gốc.')),\n)\n"
+   },
+   {
+    "id": "d2-prepare",
+    "title": "Fit scaler bằng train",
+    "hint": "Giữ cùng mu và std khi biến đổi validation và test.",
+    "starter": "def prepare_splits(X, train, val, test):\n    # Trả (X_train, X_val, X_test, mu).\n    raise NotImplementedError\n",
+    "solution": "def prepare_splits(X, train, val, test):\n    base = X[train]\n    mu = base.mean(axis=0)\n    sd = base.std(axis=0)\n    return (*((X[idx]-mu)/np.where(sd==0,1,sd) for idx in (train,val,test)), mu)\n",
+    "test": "_report('d2-prepare',\n    _check('Thống kê chỉ đến từ tập train', lambda: (_no_leak(prepare_splits), 'Thêm giá trị ngoài train rất lớn để phát hiện rò rỉ.')),\n)\n"
+   }
+  ]
+ },
+ {
+  "id": 3,
+  "title": "Bình phương tối thiểu",
+  "goals": [
+   "Tính sai số bình phương trung bình",
+   "Fit hệ số rồi đối chiếu scikit-learn"
+  ],
+  "reads": [
+   "ISLR, §3.1–3.2",
+   "Stanford CS229, §1.1–1.2"
+  ],
+  "project": "Fit log(1 + khoảng cách MRT) để dự đoán giá theo diện tích trên UCI. Ghi MAE validation và thử so với dự đoán trung bình train. Tái sử dụng quy trình với House Prices.",
+  "questions": [
+   "Cột toàn số 1 giúp học hệ số nào?",
+   "Phần dư bằng gì?",
+   "Tại nghiệm bình phương tối thiểu, Xᵀr gần bao nhiêu?"
+  ],
+  "answers": [
+   "Hệ số chặn",
+   "Dự đoán trừ giá trị thật theo quy ước bài này",
+   "0"
+  ],
+  "steps": [
+   {
+    "line": "A = add_bias(x)",
+    "state": "x = [0,1,2,3,4], A.shape = (5,2)"
+   },
+   {
+    "line": "w = lstsq(A, y)",
+    "state": "y = [1, 2, 6, 7, 9], w = [0,8; 2,1]"
+   },
+   {
+    "line": "r = A @ w - y",
+    "state": "r = [−0,2; 0,9; −1; 0,1; 0,2]"
+   },
+   {
+    "line": "A.T @ r",
+    "state": "[0, 0] trong sai số số học"
+   }
+  ],
+  "setup": "import json\nfrom pathlib import Path\nimport numpy as np\nimport pandas as pd\nfrom sklearn.linear_model import LinearRegression, Ridge\n\nDATA = next((p for p in (Path('data'), Path('../data')) if (p/'real_estate.csv').is_file()), None)\nif DATA is None:\n    raise FileNotFoundError('Mở notebook mẫu từ thư mục py30 hoặc bai_lam.')\nreal_estate = pd.read_csv(DATA / 'real_estate.csv')\n\ndef _check(name, fn):\n    try:\n        ok, detail = fn()\n    except NotImplementedError:\n        ok, detail = False, 'Chưa cài đặt (NotImplementedError)'\n    except Exception as error:\n        ok, detail = False, f'{type(error).__name__}: {error}'\n    return {'name': name, 'ok': bool(ok), 'detail': str(detail)}\n\ndef _report(ex_id, *checks):\n    print('__PY30__' + json.dumps({'id': ex_id, 'checks': list(checks)}, ensure_ascii=False))\n_X = np.log1p(real_estate[['mrt_distance_m']].to_numpy())\n_y = real_estate.price_10k_ntd_per_ping.to_numpy()\n_ref = LinearRegression().fit(_X,_y)\n",
+  "exercises": [
+   {
+    "id": "d3-fit",
+    "title": "Tìm nghiệm và tính MSE",
+    "hint": "Dùng np.linalg.lstsq để cả dữ liệu thiếu hạng cũng có nghiệm.",
+    "starter": "def add_bias(X):\n    raise NotImplementedError\n\ndef fit_normal_equation(X,y):\n    raise NotImplementedError\n\ndef mse(y, prediction):\n    raise NotImplementedError\n",
+    "solution": "def add_bias(X):\n    return np.column_stack((np.ones(len(X)), X))\n\ndef fit_normal_equation(X,y):\n    return np.linalg.lstsq(add_bias(X), y, rcond=None)[0]\n\ndef mse(y, prediction):\n    return np.mean((np.asarray(y)-prediction)**2)\n",
+    "test": "_report('d3-fit',\n    _check('Cột hệ số chặn', lambda: (np.array_equal(add_bias(_X)[:,0],np.ones(len(_X))), 'Cột đầu là cột 1.')),\n    _check('Khớp sklearn tới 1e-6', lambda: (np.allclose(fit_normal_equation(_X,_y), np.r_[_ref.intercept_,_ref.coef_], rtol=0,atol=1e-6), 'Đối chiếu trên UCI Real Estate.')),\n    _check('MSE chính xác', lambda: (np.isclose(mse([2,4],[1,6]),2.5), 'Bình phương từng sai số rồi lấy trung bình.')),\n)\n"
+   }
+  ]
+ },
+ {
+  "id": 4,
+  "title": "Gradient descent",
+  "goals": [
+   "Tính gradient MSE và kiểm tra bằng sai phân",
+   "Giải thích tác động của learning rate"
+  ],
+  "reads": [
+   "Stanford CS229, §1.1–1.2",
+   "UC Berkeley CS189, Gradient Descent"
+  ],
+  "project": "So nghiệm GD và nghiệm đóng trên UCI sau khi chuẩn hóa đặc trưng trên train. Ghi trường hợp loss dao động khi tăng learning rate.",
+  "questions": [
+   "Gradient MSE có hệ số 2/n ở đâu?",
+   "Sai phân trung tâm dùng hai điểm nào?",
+   "Tăng learning rate quá lớn có thể gây gì?"
+  ],
+  "answers": [
+   "Đạo hàm của bình phương và phép lấy trung bình",
+   "w ± ε theo mỗi tọa độ",
+   "Loss dao động hoặc tăng"
+  ],
+  "steps": [
+   {
+    "line": "w = [0, 0]",
+    "state": "X = [[1,−1],[1,1]], y = [1,3]"
+   },
+   {
+    "line": "r = X @ w - y",
+    "state": "r = [−1, −3]"
+   },
+   {
+    "line": "g = 2 * X.T @ r / len(y)",
+    "state": "g = [−4, −2]"
+   },
+   {
+    "line": "w -= 0.1 * g",
+    "state": "w = [0,4; 0,2]"
+   }
+  ],
+  "setup": "import json\nfrom pathlib import Path\nimport numpy as np\nimport pandas as pd\nfrom sklearn.linear_model import LinearRegression, Ridge\n\nDATA = next((p for p in (Path('data'), Path('../data')) if (p/'real_estate.csv').is_file()), None)\nif DATA is None:\n    raise FileNotFoundError('Mở notebook mẫu từ thư mục py30 hoặc bai_lam.')\nreal_estate = pd.read_csv(DATA / 'real_estate.csv')\n\ndef _check(name, fn):\n    try:\n        ok, detail = fn()\n    except NotImplementedError:\n        ok, detail = False, 'Chưa cài đặt (NotImplementedError)'\n    except Exception as error:\n        ok, detail = False, f'{type(error).__name__}: {error}'\n    return {'name': name, 'ok': bool(ok), 'detail': str(detail)}\n\ndef _report(ex_id, *checks):\n    print('__PY30__' + json.dumps({'id': ex_id, 'checks': list(checks)}, ensure_ascii=False))\nx = np.log1p(real_estate.mrt_distance_m.to_numpy())\n_X = np.column_stack([np.ones(len(x)),(x-x.mean())/x.std()])\n_y=real_estate.price_10k_ntd_per_ping.to_numpy()\n_w=np.zeros(2)\n_expected=2*_X.T@(_X@_w-_y)/len(_y)\n_opt=np.linalg.lstsq(_X,_y,rcond=None)[0]\n\ndef _keeps_w(fn):\n    w0 = np.zeros(2); fn(_X, _y, w0, .1, 5)\n    return np.array_equal(w0, np.zeros(2))\n",
+  "exercises": [
+   {
+    "id": "d4-gradient",
+    "title": "Gradient và kiểm tra số",
+    "hint": "Đánh giá loss ở hai phía của từng tọa độ, dùng bản sao.",
+    "starter": "def grad_mse(X,y,w):\n    raise NotImplementedError\n\ndef numerical_grad(loss,w,eps=1e-6):\n    raise NotImplementedError\n\ndef gradient_descent(X,y,w,lr,steps):\n    raise NotImplementedError\n",
+    "solution": "def grad_mse(X,y,w):\n    return (2/len(y)) * (X.T @ (X @ w - y))\n\ndef numerical_grad(loss,w,eps=1e-6):\n    eye = np.eye(len(w))\n    return np.array([(loss(w+eps*v)-loss(w-eps*v))/(2*eps) for v in eye])\n\ndef gradient_descent(X,y,w,lr,steps):\n    w=np.array(w,dtype=float,copy=True)\n    for _ in range(steps):\n        w-=lr*grad_mse(X,y,w)\n    return w\n",
+    "test": "_report('d4-gradient',\n    _check('Gradient giải tích và gradient số đúng', lambda: (np.allclose(grad_mse(_X,_y,_w),_expected) and np.allclose(numerical_grad(lambda w:np.mean((_X@w-_y)**2),_w),_expected,atol=1e-6), 'Đối chiếu cả hai với gradient tham chiếu.')),\n    _check('Hội tụ về nghiệm đóng', lambda: (np.allclose(gradient_descent(_X,_y,_w,.1,300),_opt,atol=1e-6), 'Chạy từ cùng điểm đầu.')),\n    _check('Không sửa w ban đầu', lambda: (_keeps_w(gradient_descent), 'Làm việc trên bản sao của w.')),\n)\n"
+   }
+  ]
+ },
+ {
+  "id": 5,
+  "title": "SGD, mini-batch và chuẩn hóa",
+  "goals": [
+   "So sánh batch, stochastic và mini-batch",
+   "Quan sát ảnh hưởng của thang đo đặc trưng"
+  ],
+  "reads": [
+   "UC Berkeley CS189, Stochastic Gradient Descent",
+   "Stanford CS229, §1.1–1.2"
+  ],
+  "project": "Trong House Prices, chọn các cột số khác thang đo. Dùng median, mean và độ lệch chuẩn của train rồi so loss theo số mẫu đã xem.",
+  "questions": [
+   "Một epoch có nghĩa gì?",
+   "Batch size 1 cho thuật toán nào?",
+   "Khi nào fit scaler?"
+  ],
+  "answers": [
+   "Mỗi mẫu train được xem một lần",
+   "SGD",
+   "Trên train trước huấn luyện"
+  ],
+  "steps": [
+   {
+    "line": "order = [2, 0, 3, 1, 4]",
+    "state": "x = [0,1,2,3,4], y = [1,3,5,7,9], w = 0, b = 0, lr = 0,1"
+   },
+   {
+    "line": "ids = order[0:2]",
+    "state": "ids = [2,0], x_batch = [2,0], y_batch = [5,1]"
+   },
+   {
+    "line": "r = w * x_batch + b - y_batch",
+    "state": "r = [−5,−1]"
+   },
+   {
+    "line": "dw, db = 2 * mean(x_batch * r), 2 * mean(r)",
+    "state": "dw = −10, db = −6"
+   },
+   {
+    "line": "w, b = w - lr*dw, b - lr*db",
+    "state": "w = 1, b = 0,6. Batch tiếp theo [3,1] đọc hai giá trị vừa cập nhật."
+   }
+  ],
+  "setup": "import json\nfrom pathlib import Path\nimport numpy as np\nimport pandas as pd\nfrom sklearn.linear_model import LinearRegression, Ridge\n\nDATA = next((p for p in (Path('data'), Path('../data')) if (p/'real_estate.csv').is_file()), None)\nif DATA is None:\n    raise FileNotFoundError('Mở notebook mẫu từ thư mục py30 hoặc bai_lam.')\nreal_estate = pd.read_csv(DATA / 'real_estate.csv')\n\ndef _check(name, fn):\n    try:\n        ok, detail = fn()\n    except NotImplementedError:\n        ok, detail = False, 'Chưa cài đặt (NotImplementedError)'\n    except Exception as error:\n        ok, detail = False, f'{type(error).__name__}: {error}'\n    return {'name': name, 'ok': bool(ok), 'detail': str(detail)}\n\ndef _report(ex_id, *checks):\n    print('__PY30__' + json.dumps({'id': ex_id, 'checks': list(checks)}, ensure_ascii=False))\ndef _batch_check(fn):\n    pieces=list(fn(11,4,np.random.default_rng(3)))\n    return list(map(len,pieces))==[4,4,3] and np.array_equal(np.sort(np.concatenate(pieces)),np.arange(11))\ndef _sgd_check(fn):\n    x=np.log1p(real_estate.mrt_distance_m.to_numpy())\n    X=np.column_stack([np.ones(len(x)),(x-x.mean())/x.std()])\n    y=real_estate.price_10k_ntd_per_ping.to_numpy()\n    w=fn(X,y,np.zeros(2),.02,60,16,42)\n    opt=np.linalg.lstsq(X,y,rcond=None)[0]\n    return np.mean((X@w-y)**2)<=1.05*np.mean((X@opt-y)**2)\n\ndef _reshuffles(fn):\n    rng = np.random.default_rng(5)\n    e1 = np.concatenate(list(fn(20, 6, rng))); e2 = np.concatenate(list(fn(20, 6, rng)))\n    return not np.array_equal(e1, np.arange(20)) and not np.array_equal(e1, e2)\ndef _stochastic(fn):\n    x=np.log1p(real_estate.mrt_distance_m.to_numpy()); X=np.column_stack([np.ones(len(x)),(x-x.mean())/x.std()])\n    y=real_estate.price_10k_ntd_per_ping.to_numpy()\n    a=fn(X,y,np.zeros(2),.05,1,8,1); b=fn(X,y,np.zeros(2),.05,1,8,2)\n    return not np.allclose(a,b)\n",
+  "exercises": [
+   {
+    "id": "d5-batches",
+    "title": "Một epoch mini-batch",
+    "hint": "Gọi rng.permutation(n) ở đầu mỗi epoch; trong sgd tạo rng = np.random.default_rng(seed) một lần.",
+    "starter": "def iterate_minibatches(n,batch_size,rng):\n    raise NotImplementedError\n\ndef sgd(X,y,w,lr,epochs,batch_size,seed):\n    raise NotImplementedError\n",
+    "solution": "def iterate_minibatches(n,batch_size,rng):\n    order=rng.permutation(n)\n    for i in range(0,n,batch_size):\n        yield order[i:i+batch_size]\n\ndef sgd(X,y,w,lr,epochs,batch_size,seed):\n    rng = np.random.default_rng(seed)\n    w = np.array(w,dtype=float,copy=True)\n    for _ in range(epochs):\n        for ids in iterate_minibatches(len(y),batch_size,rng):\n            batch=X[ids]\n            w -= lr*2*(batch.T@(batch@w-y[ids]))/len(ids)\n    return w\n",
+    "test": "_report('d5-batches',\n    _check('Mỗi mẫu xuất hiện đúng một lần', lambda: (_batch_check(iterate_minibatches), '11 mẫu với batch size 4.')),\n    _check('Loss không vượt 105% tối ưu', lambda: (_sgd_check(sgd), 'Đối chiếu trên đặc trưng UCI đã chuẩn hóa.')),\n    _check('Xáo trộn lại ở mỗi epoch', lambda: (_reshuffles(iterate_minibatches), 'Hai epoch liên tiếp có thứ tự khác nhau.')),\n    _check('SGD phụ thuộc seed (không phải batch GD)', lambda: (_stochastic(sgd), 'Hai seed khác nhau cho w khác nhau sau 1 epoch.')),\n)\n"
+   }
+  ]
+ },
+ {
+  "id": 6,
+  "title": "Đa thức, sai lệch–phương sai và Ridge",
+  "goals": [
+   "Đọc đường lỗi train/validation theo bậc",
+   "Dùng Ridge với hệ số chặn không bị phạt"
+  ],
+  "reads": [
+   "ISLR, §2.2.2 và §6.2",
+   "UC Berkeley CS189, Bias–Variance"
+  ],
+  "project": "So mô hình tuyến tính và đặc trưng đa thức trên House Prices. Chọn bậc và λ bằng validation rồi báo cáo cấu hình đã chốt.",
+  "questions": [
+   "Mô hình bậc cao có chắc tốt hơn trên validation?",
+   "λ=0 cho nghiệm nào?",
+   "Hệ số chặn có chịu phạt trong lab không?"
+  ],
+  "answers": [
+   "Không, có thể khớp quá mức",
+   "Bình phương tối thiểu",
+   "Không"
+  ],
+  "steps": [
+   {
+    "line": "A = [1, x, x²]",
+    "state": "x = [−1,0,1], y = [0,1,4]. A = [[1,−1,1],[1,0,0],[1,1,1]]"
+   },
+   {
+    "line": "P = diag([0,1,1])",
+    "state": "λ = 0,5. Hệ số chặn có hệ số phạt bằng 0."
+   },
+   {
+    "line": "G, h = A.T @ A + λ*P, A.T @ y",
+    "state": "G theo hàng: [3;0;2], [0;2,5;0], [2;0;2,5]. h=[5;4;4]."
+   },
+   {
+    "line": "w = solve(G, h)",
+    "state": "w ≈ [1,286; 1,6; 0,571]"
+   },
+   {
+    "line": "λ = 0 → lstsq(A, y)",
+    "state": "w = [1,2,1]. So sánh hệ số khi áp phạt và khi bỏ phạt."
+   }
+  ],
+  "setup": "import json\nfrom pathlib import Path\nimport numpy as np\nimport pandas as pd\nfrom sklearn.linear_model import LinearRegression, Ridge\n\nDATA = next((p for p in (Path('data'), Path('../data')) if (p/'real_estate.csv').is_file()), None)\nif DATA is None:\n    raise FileNotFoundError('Mở notebook mẫu từ thư mục py30 hoặc bai_lam.')\nreal_estate = pd.read_csv(DATA / 'real_estate.csv')\n\ndef _check(name, fn):\n    try:\n        ok, detail = fn()\n    except NotImplementedError:\n        ok, detail = False, 'Chưa cài đặt (NotImplementedError)'\n    except Exception as error:\n        ok, detail = False, f'{type(error).__name__}: {error}'\n    return {'name': name, 'ok': bool(ok), 'detail': str(detail)}\n\ndef _report(ex_id, *checks):\n    print('__PY30__' + json.dumps({'id': ex_id, 'checks': list(checks)}, ensure_ascii=False))\n_x=np.linspace(-1,1,12)\n_X=_x[:,None]**np.arange(1,4)\n_y=8+3*_x+2*_x**2\ndef _ridge_check(fn):\n    model=Ridge(alpha=.7).fit(_X,_y)\n    return np.allclose(fn(_X,_y,.7),np.r_[model.intercept_,model.coef_],atol=1e-6)\n",
+  "exercises": [
+   {
+    "id": "d6-ridge",
+    "title": "Tạo cột đa thức và fit Ridge",
+    "hint": "Ghép phương trình bình phương tối thiểu với hàng √λ, bỏ cột chặn.",
+    "starter": "def polynomial_features(x,degree):\n    raise NotImplementedError\n\ndef fit_ridge(X,y,lam):\n    # X chưa gồm cột hệ số chặn. Trả [intercept, *coefficients].\n    raise NotImplementedError\n",
+    "solution": "def polynomial_features(x,degree):\n    return np.asarray(x).reshape(-1,1) ** np.arange(1,degree+1)\n\ndef fit_ridge(X,y,lam):\n    A=np.column_stack((np.ones(len(X)),X))\n    penalty=np.diag(np.r_[0.,np.ones(X.shape[1])])\n    return np.linalg.lstsq(np.vstack([A,np.sqrt(lam)*penalty]),np.r_[y,np.zeros(A.shape[1])],rcond=None)[0]\n",
+    "test": "_report('d6-ridge',\n    _check('Mỗi cột đúng một lũy thừa', lambda: (np.array_equal(polynomial_features([2,3],3),[[2,4,8],[3,9,27]]), 'Các bậc từ 1 đến degree.')),\n    _check('Ridge khớp scikit-learn', lambda: (_ridge_check(fit_ridge), 'So hệ số chặn và trọng số.')),\n    _check('λ=0 trùng lstsq', lambda: (np.allclose(fit_ridge(_X,_y,0), np.linalg.lstsq(np.column_stack([np.ones(len(_X)),_X]),_y,rcond=None)[0]), 'Không áp phạt khi λ = 0.')),\n)\n"
+   }
+  ]
+ },
+ {
+  "id": 7,
+  "title": "Dự án House Prices",
+  "goals": [
+   "Hoàn thiện pipeline có baseline và validation",
+   "Xuất submission CSV theo Id và SalePrice"
+  ],
+  "reads": [
+   "ISLR, §3.3 và §6.2",
+   "ISLR, §5.1.3–5.1.4"
+  ],
+  "project": "Tải House Prices sau khi chấp nhận luật cuộc thi. Làm pipeline trên train.csv và test.csv, chọn cột số và λ. Kiểm tra submission.csv giữ đúng Id, SalePrice và thứ tự test trước khi nộp thủ công.",
+  "questions": [
+   "Vì sao giữ nguyên thứ tự Id của test?",
+   "Median và scaler fit trên tập nào?",
+   "Dự đoán hằng dùng giá trị nào cho MAE?"
+  ],
+  "answers": [
+   "Mỗi dự đoán cần ứng với đúng nhà",
+   "Tập train",
+   "Median giá trên train"
+  ],
+  "steps": [
+   {
+    "line": "x_train, y_train = [10,20,30], [100,200,300]",
+    "state": "Ví dụ giả lập, λ = 0. Validation: x=40, y=380. Test: Id=77, x=50."
+   },
+   {
+    "line": "median, mu, sd = fit_preprocess(x_train)",
+    "state": "median = 20, mu = 20, sd ≈ 8,165."
+   },
+   {
+    "line": "validation_mae = abs(predict(40) - 380)",
+    "state": "Dự đoán = 400. MAE = 20. Baseline median giá train = 200, MAE = 180."
+   },
+   {
+    "line": "final = fit(selected_config, all_labeled_data)",
+    "state": "Fit lại với cả điểm validation sau khi chọn cấu hình. Trong đơn vị ban đầu: giá = 9,4 × diện tích + 10."
+   },
+   {
+    "line": "submission = DataFrame({Id: [77], SalePrice: [final(50)]})",
+    "state": "Một dòng submission: Id = 77, SalePrice = 480."
+   }
+  ],
+  "setup": "import json\nfrom pathlib import Path\nimport numpy as np\nimport pandas as pd\nfrom sklearn.linear_model import LinearRegression, Ridge\n\nDATA = next((p for p in (Path('data'), Path('../data')) if (p/'real_estate.csv').is_file()), None)\nif DATA is None:\n    raise FileNotFoundError('Mở notebook mẫu từ thư mục py30 hoặc bai_lam.')\nreal_estate = pd.read_csv(DATA / 'real_estate.csv')\n\ndef _check(name, fn):\n    try:\n        ok, detail = fn()\n    except NotImplementedError:\n        ok, detail = False, 'Chưa cài đặt (NotImplementedError)'\n    except Exception as error:\n        ok, detail = False, f'{type(error).__name__}: {error}'\n    return {'name': name, 'ok': bool(ok), 'detail': str(detail)}\n\ndef _report(ex_id, *checks):\n    print('__PY30__' + json.dumps({'id': ex_id, 'checks': list(checks)}, ensure_ascii=False))\ndef _test_pipeline(fn, output):\n    X=np.arange(30.,dtype=float).reshape(15,2)\n    X[3,0]=np.nan\n    y=np.arange(15.)*100+10000\n    test=np.array([[2.,3.],[10.,np.nan]])\n    ids=[77,55]\n    result=fn(X,y,test,ids,seed=7)\n    if not output:\n        train=np.random.default_rng(7).permutation(len(y))[:12]\n        sample=X[train]\n        expected=np.where(np.isnan(sample),np.nanmedian(sample,axis=0),sample).mean(axis=0)\n        return np.allclose(result['mu'],expected) and np.isfinite(result['mae']) and np.isfinite(result['baseline_mae'])\n    repeat=fn(X,y,test,ids,seed=7)\n    sub=result['submission']\n    return list(sub.columns)==['Id','SalePrice'] and sub.Id.tolist()==ids and np.isfinite(sub.SalePrice).all() and sub.equals(repeat['submission'])\ndef export_house_prices(run_pipeline, lam=1.0):\n    folder=DATA/'kaggle/house-prices-advanced-regression-techniques'\n    train=pd.read_csv(folder/'train.csv')\n    test=pd.read_csv(folder/'test.csv')\n    columns=[c for c in train.select_dtypes(include='number') if c not in ('Id','SalePrice') and c in test.columns]\n    result=run_pipeline(train[columns].to_numpy(float),train.SalePrice.to_numpy(float),test[columns].to_numpy(float),test.Id,lam=lam)\n    result['submission'].to_csv('submission.csv',index=False)\n    return result['mae'], result['baseline_mae']\n",
+  "exercises": [
+   {
+    "id": "d7-pipeline",
+    "title": "Pipeline Ridge và tệp Kaggle",
+    "hint": "Theo đúng quy ước chia trong ô code. Viết một hàm fit(features, target) dùng chung cho validation và lần fit cuối trên toàn bộ train.csv. Chạy export_house_prices(run_pipeline) sau khi tải dữ liệu Kaggle để ghi submission.csv.",
+    "starter": "def run_pipeline(X, y, test_X, ids, seed=42, lam=1.0):\n    # Quy ước chia: order = np.random.default_rng(seed).permutation(len(y));\n    # 80% đầu (int(0.8*n)) là train, phần còn lại là validation.\n    # Điền giá trị thiếu bằng median của train, chuẩn hóa bằng mean/std của train.\n    # Trả dict: mu (mean sau khi điền thiếu, tính trên train), mae, baseline_mae (median train), submission (DataFrame Id, SalePrice).\n    raise NotImplementedError\n",
+    "solution": "def run_pipeline(X, y, test_X, ids, seed=42, lam=1.0):\n    order=np.random.default_rng(seed).permutation(len(y))\n    cut=int(.8*len(y))\n    train,val=order[:cut],order[cut:]\n    def fit(features, target):\n        med=np.nanmedian(features,axis=0)\n        med=np.where(np.isfinite(med),med,0)\n        clean=np.where(np.isnan(features),med,features)\n        mu=clean.mean(axis=0)\n        sd=clean.std(axis=0)\n        sd=np.where(sd==0,1,sd)\n        model=Ridge(alpha=lam).fit((clean-mu)/sd,target)\n        return mu, lambda x: model.predict((np.where(np.isnan(x),med,x)-mu)/sd)\n    mu, predict=fit(X[train],y[train])\n    mae=np.mean(np.abs(y[val]-predict(X[val])))\n    baseline_mae=np.mean(np.abs(y[val]-np.median(y[train])))\n    _, final=fit(X,y)\n    out=pd.DataFrame({'Id':ids,'SalePrice':np.maximum(final(test_X),0)})\n    return {'mu':mu,'mae':mae,'baseline_mae':baseline_mae,'submission':out}\n",
+    "test": "_report('d7-pipeline',\n    _check('Fit thống kê theo train', lambda: (_test_pipeline(run_pipeline, False), 'Kiểm chứng mu với phân hoạch theo seed.')),\n    _check('Tái lập và định dạng submission', lambda: (_test_pipeline(run_pipeline, True), 'Kiểm tra đúng Id, cột, thứ tự và số dự đoán hữu hạn.')),\n)\n"
+   }
+  ]
+ }
+]

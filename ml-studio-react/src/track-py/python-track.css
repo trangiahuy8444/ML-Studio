@@ -1,0 +1,31 @@
+.py30-section { margin-block: 18px; padding: clamp(16px,3vw,30px); }
+.py30-section h2 { margin: 10px 0 12px; }
+.py30-section :is(ol,ul) { margin: 8px 0 12px; padding-inline-start: 1.4em; }
+.py30-section details { margin: 9px 0; }
+.py30-section summary { cursor: pointer; font-weight: 650; }
+.py30-section textarea { display:block; width:100%; }
+.py30-section label:not(.algo-range) > input:not([type="checkbox"]) { border: 1px solid var(--studio-line,#ccc); border-radius: 5px; padding: 4px 8px; max-width: 100%; }
+.py30-actions,.py30-kernel,.py30-days,.py30-checklist { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:12px 0; }
+.py30-days { align-items:stretch; }
+.py30-days button { text-align:left; white-space:normal; }
+.py30-checklist label { padding:5px 8px; }
+.py30-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr)); gap:14px; align-items:center; }
+.py30-exercise { border-top:1px solid var(--studio-line,#ddd); margin-top:20px; padding-top:16px; }
+.py30-exercise button { margin-block:8px; }
+.py30-exercise pre { white-space:pre-wrap; overflow-wrap:anywhere; }
+.py30-exercise .syntax-layer { white-space:pre; overflow-wrap:normal; }
+.py30-output iframe { background:white; width:100%; min-height:160px; }
+.py30-output img { max-width:100%; height:auto; }
+
+.py30-section { min-width:0; overflow-wrap:anywhere; }
+.py30-section .js-plotly-plot { overflow:hidden; }
+
+/* Ô soạn code của bài tập: lớp tô màu và textarea phải trùng nhau từng ký tự. */
+.py30-exercise .python-editor textarea{box-sizing:border-box;margin:0;padding:6px 8px;border:1px solid #cfcfcf;font:var(--python-code-font)/var(--python-code-line) Menlo,Consolas,monospace;letter-spacing:normal;word-spacing:normal;text-align:left;text-indent:0;white-space:pre;tab-size:4;font-variant-ligatures:none;overflow-wrap:normal;word-break:normal;position:relative;z-index:1;display:block;width:100%;background:transparent;color:transparent;-webkit-text-fill-color:transparent;caret-color:#111;resize:vertical;overflow:auto;min-height:38px;max-height:460px}
+.py30-exercise .python-editor textarea::selection{background:#93c5fd77;color:transparent;-webkit-text-fill-color:transparent}
+.py30-exercise .python-editor .syntax-layer{white-space:pre;overflow-wrap:normal;word-break:normal}
+.py30-section .python-editor{overflow-wrap:normal}
+.pipeline-flow{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}
+.pipeline-flow span{padding:4px 9px;border-radius:999px;border:1px solid #3b5874;font-size:.8rem;color:#b5c9df}
+.pipeline-flow span.done{border-color:#42d3e5;color:#42d3e5}
+.pipeline-flow span.active{background:#42d3e5;color:#092033;border-color:#42d3e5}
