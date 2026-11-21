@@ -1,3 +1,4 @@
+import type {ProjectId} from './projects/ids';
 import type {AssessmentState} from './lib/assessment';
 export type CellType='code'|'markdown';
 export interface Output {output_type:'stream'|'execute_result'|'display_data'|'error';text?:string|string[];data?:Record<string,string>;execution_count?:number;ename?:string;evalue?:string;traceback?:string[];name?:string}
@@ -8,7 +9,7 @@ export interface Phase {id:number;title:string;range:[number,number];goal:string
 export interface Course {phases:Phase[];days:Day[];resources:{id:string;title:string;path:string;note:string}[];fullStudyPlan:string;deploymentPlan:string}
 export interface DayProgress {a:boolean;b:boolean;c:boolean;review:boolean;note:string}
 export interface Progress {version:1;days:Record<string,DayProgress>;assessment?:AssessmentState}
-export type Route={kind:'home'}|{kind:'project'}|{kind:'overview'}|{kind:'phase';id:number}|{kind:'day';id:number}|{kind:'exercises'}|{kind:'resources'}|{kind:'lab'}|{kind:'py';id?:number}|{kind:'gnn'}|{kind:'assessments'}|{kind:'guide';id?:number};
+export type Route={kind:'home'}|{kind:'project'}|{kind:'overview'}|{kind:'phase';id:number}|{kind:'day';id:number}|{kind:'exercises'}|{kind:'resources'}|{kind:'lab'}|{kind:'py';id?:number}|{kind:'gnn'}|{kind:'assessments'}|{kind:'guide';id?:number}|{kind:'projects'}|{kind:'proj';id:ProjectId};
 export interface PlotTrace {type:string;[key:string]:unknown}
 export interface PlotApi {react:(el:HTMLElement,traces:PlotTrace[],layout:Record<string,unknown>,config:Record<string,unknown>)=>Promise<void>;purge:(el:HTMLElement)=>void;Plots:{resize:(el:HTMLElement)=>void}}
 export interface KernelResult {ok:boolean;execution_count:number;outputs:Output[];has_plot_epoch:boolean}

@@ -1,4 +1,5 @@
 import {ArrowRight,ChartLine,FlaskConical,House,Map,NotebookPen,SquareTerminal,Target} from 'lucide-react';
+import {CHAPTERS,PROJECTS} from '../projects/chapters';
 import type {Progress,Route} from '../types';
 import {course} from '../data';
 import {complete} from '../lib/domain';
@@ -79,8 +80,16 @@ export function Home({progress,navigate}:{progress:Progress;navigate:(r:Route,an
       <div><SquareTerminal size={18}/><strong>{py}</strong><span>ngày Python → ML</span></div>
     </section>
 
+
+    {next&&(()=>{const ch=CHAPTERS[next.phase-1];return <section className="home-chapter" style={{['--phase' as string]:PHASE_COLORS[ch.id-1]}}>
+      <div><span className="eyebrow">Chương đang học · {ch.id}/6</span><h2>{ch.title}</h2>
+        <h3 className="outcome-title"><Target size={15}/> Học xong chương này em làm được</h3>
+        <ul className="outcomes">{ch.outcomes.map(o=><li key={o}>{o}</li>)}</ul></div>
+      <div className="home-chapter-side">{ch.projects.map(p=><button key={p} className="chip proj-chip" onClick={()=>navigate(p==='housing'?{kind:'project'}:{kind:'proj',id:p})}><FlaskConical size={13}/>{PROJECTS[p].title}</button>)}
+        <button className="btn-outline" onClick={()=>navigate({kind:'phase',id:ch.id})}>Xem cả chương <ArrowRight size={14}/></button></div>
+    </section>})()}
     <section className="home-map">
-      <div className="section-head"><div><span className="eyebrow">Bản đồ 30 ngày</span><h2>Mỗi ô là một buổi học. Bấm để mở.</h2></div>
+      <div className="section-head"><div><span className="eyebrow">Bản đồ 6 chương · 30 ngày</span><h2>Mỗi ô là một buổi học. Bấm để mở.</h2></div>
         <ul className="map-legend"><li><i className="cell done"/>Hoàn thành</li><li><i className="cell partial"/>Đang làm</li><li><i className="cell"/>Chưa học</li></ul></div>
       <div className="phase-columns">
         {course.phases.map(p=>{const days=course.days.filter(d=>d.phase===p.id);const n=days.filter(d=>states[d.id-1]==='done').length;const color=PHASE_COLORS[p.id-1];
@@ -97,11 +106,12 @@ export function Home({progress,navigate}:{progress:Progress;navigate:(r:Route,an
     <section className="home-labs">
       <div className="section-head"><div><span className="eyebrow">Phòng lab</span><h2>Vào thẳng thực hành</h2></div></div>
       <div className="lab-cards">
+        <button className="lab-card" onClick={()=>navigate({kind:'projects'})}><FlaskConical size={22}/><strong>9 dự án theo chương</strong><span>Khối u, email rác, chữ số viết tay, robot tự học… mỗi dự án 5 bước.</span></button>
         <button className="lab-card" onClick={()=>navigate({kind:'project'})}><House size={22}/><strong>Dự án giá nhà</strong><span>Đoán giá, vẽ đường thẳng, cho máy học, rồi thử dữ liệu thật.</span></button>
         <button className="lab-card" onClick={()=>navigate({kind:'py'})}><SquareTerminal size={22}/><strong>Python → ML 30 ngày</strong><span>Tự cài từng thuật toán bằng Python, mỗi ngày một mô phỏng.</span></button>
-        <button className="lab-card" onClick={()=>navigate({kind:'exercises'})}><FlaskConical size={22}/><strong>Thư viện thực hành</strong><span>90 bài theo mức A/B/C, tìm theo điều em muốn hiểu.</span></button>
+        <button className="lab-card" onClick={()=>navigate({kind:'exercises'})}><NotebookPen size={22}/><strong>Thư viện bài tập</strong><span>90 bài theo mức A/B/C, tìm theo điều em muốn hiểu.</span></button>
         <button className="lab-card" onClick={()=>navigate({kind:'lab'})}><ChartLine size={22}/><strong>Phòng hồi quy</strong><span>Mô phỏng hồi quy nâng cao: nhiều biến, Iris, CSV của em.</span></button>
-        <button className="lab-card" onClick={()=>navigate({kind:'overview'})}><Map size={22}/><strong>Lộ trình chi tiết</strong><span>Mục tiêu và mốc kiểm tra của từng giai đoạn.</span></button>
+        <button className="lab-card" onClick={()=>navigate({kind:'overview'})}><Map size={22}/><strong>6 chương học</strong><span>Mục tiêu "học xong làm được gì" và mốc kiểm tra của từng chương.</span></button>
       </div>
     </section>
   </div>;
