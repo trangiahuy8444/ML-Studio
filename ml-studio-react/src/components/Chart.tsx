@@ -31,7 +31,7 @@ export function Chart({traces,xTitle='',yTitle='',height=350,layout}:{traces:Plo
     const el=ref.current;
     if(!el)return;
     let cancelled=false;
-    const dark=!!el.closest('.simulation-studio');
+    const dark=true; // Toàn bộ app dùng nền tối.
     const grid=dark?'#2b405a':'#e4ebe3';
     const axis=(value:unknown,title='')=>({...{title:{text:title},gridcolor:grid,automargin:true},...object(value),...(dark?{gridcolor:grid,zerolinecolor:'#41536a',linecolor:'#39536f'}:{})});
     const config:Layout={paper_bgcolor:'transparent',plot_bgcolor:'transparent',

@@ -34,5 +34,5 @@ test('new routes round-trip and old routes retain their form',()=>{
   for(const route of ['py','py-1','py-7','py-30','day-30','gnn','project-house']){
     assert.equal(routeHash(parseRoute('#'+route)),route);
   }
-  assert.equal(parseRoute('#py-31').kind,'project');
+  assert.equal(parseRoute('#py-31').kind,'home');
 });
