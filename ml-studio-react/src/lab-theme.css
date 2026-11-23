@@ -138,8 +138,8 @@ td{color:var(--text)}
 .syntax-layer .hljs-title,.syntax-layer .hljs-function .hljs-title,.syntax-layer .hljs-class .hljs-title{color:#82aaff}
 .syntax-layer .hljs-operator{color:#89ddff}
 .syntax-layer .hljs-meta{color:var(--gold)}
-.syntax-layer .hljs-subst,.syntax-layer .hljs-params{color:var(--text)}
-.syntax-layer,.syntax-layer code{color:var(--text)}
+.syntax-layer .hljs-subst,.syntax-layer .hljs-params,.syntax-layer .hljs-variable,.syntax-layer .hljs-punctuation{color:var(--text)}
+.python-editor .syntax-layer,.python-editor .syntax-layer code,.syntax-layer,.syntax-layer code{color:var(--text)}
 
 /* ---------- Trang Hôm nay ---------- */
 .home{padding-top:30px}
