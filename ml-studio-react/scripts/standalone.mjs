@@ -5,3 +5,8 @@ html=html.replace(/<script\b[^>]*src="([^"]+)"[^>]*><\/script>/g,(_,src)=>{const
 html=html.replace(/<link\b[^>]*href="([^"]+\.css)"[^>]*>/g,(_,src)=>'<style>'+fs.readFileSync(new URL(src.replace(/^\.\//,''),dist),'utf8')+'</style>');
 const legacy=fs.readFileSync(new URL('legacy/index.html',dist),'utf8');html=html.replace('<body>',()=>'<body><script>window.ML_LEGACY_HTML='+safe(JSON.stringify(legacy))+';</script>');const end=html.lastIndexOf('</body>');html=html.slice(0,end)+entry+html.slice(end);
 fs.writeFileSync(new URL('ML_Studio_React.html',root),html);console.log('Standalone React:',Buffer.byteLength(html),'bytes');
+let distIndex=fs.readFileSync(new URL('index.html',dist),'utf8');
+const version=Date.now().toString(36);
+distIndex=distIndex.replace(/(src="(?:\.\/)?assets\/app\.js)(")/g,`$1?v=${version}$2`);
+fs.writeFileSync(new URL('index.html',dist),distIndex);
+
