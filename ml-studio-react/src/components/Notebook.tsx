@@ -42,16 +42,23 @@ function BrowserNotebook({book,bookId,title,onBusy}:{book:NotebookData;bookId:st
 }
 
 export function Notebook(props:{book:NotebookData;bookId:string;title:string;onBusy:(v:boolean)=>void}){
- const [state,setState]=useState<'checking'|'ready'|'offline'>('checking');
- const [fallback,setFallback]=useState(false);
- async function check(){setState('checking');try{if(!['http:','https:'].includes(location.protocol))throw Error('file');const r=await fetch('/jupyter/status',{cache:'no-store',signal:AbortSignal.timeout(3000)});const data=await r.json();setState(r.ok&&data.ready&&data.engine==='Jupyter NbClassic'?'ready':'offline')}catch{setState('offline')}}
- useEffect(()=>{void check()},[]);
- return <section className="jupyter-real panel" id="notebook" aria-label="Thực hành bằng Jupyter Notebook thật">
-  <span className="eyebrow">Môi trường thực hành · Jupyter Notebook</span><h2>{props.title}</h2>
-  <p>Soạn mã trong Jupyter truyền thống, chạy bằng Python kernel trên máy và lưu trực tiếp vào tệp .ipynb của bài.</p>
-  <p role="status">{state==='checking'?'Đang kiểm tra Notebook Server…':state==='ready'?'● Jupyter NbClassic đang chạy · Python kernel trên máy':'○ Chưa kết nối Notebook Server'}</p>
-  {state==='ready'?<a className="btn-primary" href={'/jupyter/open?book='+encodeURIComponent(props.bookId)} target="_blank" rel="noopener noreferrer">Mở Jupyter Notebook ↗</a>:<div className="jupyter-instructions"><p>Bấm đúp <strong>Mo_Jupyter_Studio.command</strong> trong thư mục bộ thực hành và giữ Terminal mở. Lần đầu bộ khởi động sẽ cài Jupyter cùng các thư viện cần thiết.</p><p>Sau đó mở địa chỉ web mà Terminal in ra, quay lại bài này và kiểm tra kết nối.</p><button className="btn-outline" onClick={()=>void check()}>Kiểm tra kết nối</button></div>}
-  <p className="small-note">Jupyter mở ở tab riêng. Shift + Enter để chạy ô; Ctrl/Cmd + S để lưu. Thay đổi trong Jupyter được giữ trong tệp trên máy, độc lập với mã từng sửa trong trình duyệt.</p>
-  <details onToggle={e=>setFallback(e.currentTarget.open)}><summary>Chạy thử nhanh bằng Python trong trình duyệt (Pyodide)</summary>{fallback&&<BrowserNotebook {...props}/>}</details>
+ const [state,setState]=useState<'checking'|'ready'|'offline'>('offline');
+ const isLocalHost=typeof location!=='undefined'&&['127.0.0.1','localhost'].includes(location.hostname)&&['http:','https:'].includes(location.protocol);
+ async function check(){
+  if(!isLocalHost){setState('offline');return}
+  setState('checking');
+  try{
+   const r=await fetch('/jupyter/status',{cache:'no-store',signal:AbortSignal.timeout(3000)});
+   const data=await r.json();
+   setState(r.ok&&data.ready&&data.engine==='Jupyter NbClassic'?'ready':'offline');
+  }catch{setState('offline')}
+ }
+ useEffect(()=>{if(isLocalHost)void check()},[isLocalHost]);
+ return <section className="jupyter-real panel" id="notebook" aria-label="Thực hành Python trực tiếp trong trình duyệt">
+  <span className="eyebrow">Môi trường thực hành · Python trực tiếp</span><h2>{props.title}</h2>
+  <p>Soạn và chạy mã Python trực tiếp trong trình duyệt (Pyodide) — dùng được ngay trên web mà không cần cài đặt. Dùng <strong>File → Download .ipynb</strong> để tải bài làm về máy.</p>
+  {state==='ready'&&<div className="jupyter-instructions" role="status"><p>● Jupyter NbClassic cục bộ đang chạy · Có thể mở và lưu trực tiếp vào tệp <code>.ipynb</code> trên máy.</p><a className="btn-primary" href={'/jupyter/open?book='+encodeURIComponent(props.bookId)} target="_blank" rel="noopener noreferrer">Mở Jupyter Notebook ↗</a></div>}
+  <BrowserNotebook {...props}/>
+  {state!=='ready'&&<details><summary>Tùy chọn: Mở bằng Jupyter truyền thống trên máy (khi chạy từ bộ mã nguồn)</summary><div className="jupyter-instructions"><p>Nếu bạn chạy bộ mã nguồn trên máy Mac, bấm đúp <strong>Mo_Jupyter_Studio.command</strong> rồi mở địa chỉ Terminal in ra để mở tệp <code>.ipynb</code> bằng Jupyter trên máy.</p>{isLocalHost&&<button className="btn-outline" disabled={state==='checking'} onClick={()=>void check()}>{state==='checking'?'Đang kiểm tra…':'Kiểm tra kết nối Jupyter cục bộ'}</button>}</div></details>}
  </section>
 }

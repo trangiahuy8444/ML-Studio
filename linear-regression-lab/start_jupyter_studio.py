@@ -133,7 +133,7 @@ def main():
     if optional:
         print('Gói bổ sung Python → ML chưa có: ' + ', '.join(optional) +
               '. Cài requirements-py30.txt khi cần Kaggle hoặc PyTorch.', flush=True)
-    directory = next((p for p in [ROOT / 'dist', ROOT / 'web'] if (p / 'index.html').is_file()), None)
+    directory = next((p for p in [ROOT.parent / 'ml-studio-react' / 'dist', ROOT / 'dist', ROOT / 'web'] if (p / 'index.html').is_file()), None)
     if directory is None:
         raise SystemExit('Cần giải nén toàn bộ ZIP, bao gồm thư mục web.')
     books = notebook_paths(ROOT)
@@ -201,7 +201,7 @@ def main():
             raise RuntimeError('Jupyter đã chạy nhưng chưa tìm thấy giao diện Classic.')
         web.kernel_process, web.kernel_token, web.kernel_url = process, token, url
         web.classic_prefix, web.books = prefix, books
-        homepage = f'http://127.0.0.1:{web.server_port}/#project-house'
+        homepage = f'http://127.0.0.1:{web.server_port}/'
         print(f'\nJupyter Notebook thật đã sẵn sàng.\nMở bài học: {homepage}\nBấm “Mở Jupyter Notebook” trong bài để thực hành.\nGiữ Terminal mở; Ctrl+C để dừng cả web và Jupyter.\n', flush=True)
         if not args.no_browser:
             webbrowser.open(homepage)

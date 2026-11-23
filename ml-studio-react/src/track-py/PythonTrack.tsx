@@ -3,6 +3,8 @@ import {useEffect,useRef,useState} from 'react';
 import {PythonEditor} from '../components/PythonEditor';
 import {Table,Transport,usePlayback} from '../components/ObservationControls';
 import {download} from '../lib/domain';
+import {PythonKernel} from '../lib/kernel';
+import type {Output} from '../types';
 import {WeekOneLab} from './WeekOneLab';
 import {discoverServer,LocalKernel,openInJupyterHref} from './kernel/client';
 import type {KernelStatus} from './kernel/client';
@@ -22,11 +24,33 @@ const content=[...week1.map(l=>({...l,projectTitle:'House Prices'})),...week2,..
 import './python-track.css';
 
 const storageKey='mlStudioPy30-progress-v1';
+const codeStorageKey='mlStudioPy30-code-v1';
 const blocks=[['Khởi động',10],['Trực quan hóa',30],['Mô phỏng code',20],['Đọc có chủ đích',20],['Lab từ đầu',50],['Dự án',40],['Tổng kết',10]] as const;
 type Lesson=(typeof content)[number];
 type DayProgress={blocks:boolean[];journal:string;prediction:string;grades:Record<string,boolean>};
 type Progress={version:1;days:Record<string,DayProgress>};
 const emptyDay=():DayProgress=>({blocks:blocks.map(()=>false),journal:'',prediction:'',grades:{}});
+function loadSavedCodes(lesson:Lesson):Record<string,string>{
+  const defaults=Object.fromEntries(lesson.exercises.map(e=>[e.id,e.starter]));
+  try{
+    const all=JSON.parse(localStorage.getItem(codeStorageKey)||'{}') as Record<string,Record<string,string>>;
+    const saved=all[String(lesson.id)];
+    if(saved&&typeof saved==='object'){
+      for(const e of lesson.exercises){if(typeof saved[e.id]==='string')defaults[e.id]=saved[e.id];}
+    }
+  }catch{/* Ignore unavailable storage */}
+  return defaults;
+}
+function persistDayCodes(dayId:number,codes:Record<string,string>){
+  try{
+    const all=JSON.parse(localStorage.getItem(codeStorageKey)||'{}') as Record<string,Record<string,string>>;
+    all[String(dayId)]=codes;
+    localStorage.setItem(codeStorageKey,JSON.stringify(all));
+  }catch{/* Ignore unavailable storage */}
+}
+function normalizeOutputs(raw:Output[]):CellOutput[]{
+  return raw.map(o=>({...o,text:Array.isArray(o.text)?o.text.join(''):o.text}));
+}
 function progressFrom(value:unknown):Progress {
   if(!value||typeof value!=='object'||!('version'in value)||value.version!==1||
      !('days'in value)||!value.days||typeof value.days!=='object'||Array.isArray(value.days))throw Error('Tệp không phải tiến độ Python → ML phiên bản 1.');
@@ -70,14 +94,28 @@ function CodeTrace({lesson}:{lesson:Lesson}) {
 
 function DayPage({lesson,progress,change,onBusy,openDay}:{lesson:Lesson;progress:DayProgress;change:(patch:Partial<DayProgress>)=>void;onBusy:(b:boolean)=>void;openDay:(id?:number)=>void}) {
   const {id}=lesson, file=`Ngay_${String(id).padStart(2,'0')}.ipynb`,modelPath='py30/'+file,workPath='py30/bai_lam/'+file;
-  const client=useRef<LocalKernel|null>(null), mounted=useRef(true), action=useRef(false);
-  const [status,setStatus]=useState<KernelStatus>('offline'),[working,setWorking]=useState(false),[notice,setNotice]=useState(''),[hasSaved,setHasSaved]=useState(false);
-  const [codes,setCodes]=useState<Record<string,string>>(()=>Object.fromEntries(lesson.exercises.map(e=>[e.id,e.starter])));
+  const client=useRef<LocalKernel|null>(null), pyKernel=useRef<PythonKernel|null>(null), mounted=useRef(true), action=useRef(false);
+  const isLocalHost=typeof location!=='undefined'&&['127.0.0.1','localhost'].includes(location.hostname)&&['http:','https:'].includes(location.protocol);
+  const [status,setStatus]=useState<KernelStatus>('offline'),[pyReady,setPyReady]=useState(false),[working,setWorking]=useState(false),[notice,setNotice]=useState(''),[hasSaved,setHasSaved]=useState(false);
+  const [codes,setCodes]=useState<Record<string,string>>(()=>loadSavedCodes(lesson));
   const [runs,setRuns]=useState<Record<string,CellRun>>({});
   useEffect(()=>{
     mounted.current=true;
-    return ()=>{mounted.current=false; onBusy(false); if(client.current){client.current.onStatus=()=>{};void client.current.shutdown();client.current=null;}};
-  },[onBusy]);
+    if(isLocalHost){
+      void (async()=>{
+        try{
+          const r=await fetch('/jupyter/status',{cache:'no-store',signal:AbortSignal.timeout(1500)});
+          const data=await r.json();
+          if(mounted.current&&r.ok&&data.ready){await connect();}
+        }catch{/* Fallback smoothly to browser Pyodide */}
+      })();
+    }
+    return ()=>{
+      mounted.current=false; onBusy(false);
+      if(client.current){client.current.onStatus=()=>{};void client.current.shutdown();client.current=null;}
+      if(pyKernel.current){pyKernel.current.dispose();pyKernel.current=null;}
+    };
+  },[onBusy,isLocalHost]);
   const runAction=async(fn:()=>Promise<void>)=>{
     if(action.current)return;
     action.current=true;setWorking(true);onBusy(true);setNotice('');
@@ -98,33 +136,65 @@ function DayPage({lesson,progress,change,onBusy,openDay}:{lesson:Lesson;progress
       setHasSaved(saved!==null);
     }catch(error){setStatus('offline');throw error;}
   }
+  async function ensurePyodide():Promise<PythonKernel> {
+    if(!pyKernel.current){
+      pyKernel.current=new PythonKernel(text=>{if(mounted.current)setNotice(text);});
+    }
+    await pyKernel.current.start();
+    if(mounted.current)setPyReady(true);
+    return pyKernel.current;
+  }
   async function runExercise(exercise:Lesson['exercises'][number]) {
     const k=client.current;
-    if(!k)return;
+    const jupyterConnected=Boolean(k&&(status==='idle'||status==='busy'));
     const oldOutput=runs[exercise.id]?.output??[];
     setRuns(previous=>({...previous,[exercise.id]:{output:oldOutput,attempted:true}}));
     change({grades:{...progress.grades,[exercise.id]:false}});
     const update=(output:CellOutput[],report?:Report,error?:string)=>setRuns(previous=>({...previous,[exercise.id]:{output,attempted:true,report,error}}));
-    const setup=await k.execute(lesson.setup,undefined,{storeHistory:false});
-    if(setup.status!=='ok'){update(setup.outputs,undefined,'Ô chuẩn bị gặp lỗi.');return;}
-    // Xóa các hàm và lớp của bài khỏi kernel trước khi chạy, để kết quả chấm phản ánh đúng code đang có trong ô.
     const names=[...exercise.starter.matchAll(/^(?:def|class)\s+([A-Za-z_]\w*)/gm)].map(m=>m[1]);
-    if(names.length)await k.execute(`for _n in ${JSON.stringify(names)}:\n    globals().pop(_n, None)`,undefined,{storeHistory:false});
-    const result=await k.execute(codes[exercise.id],s=>update(s.outputs));
-    if(result.status!=='ok'){update(result.outputs,undefined,'Ô bài làm gặp lỗi hoặc đã bị ngắt.');return;}
-    const graded=await k.execute(exercise.test,undefined,{storeHistory:false});
-    const parsed=extractReports(graded.outputs);
-    const report=graded.status==='ok'?parsed.reports.find(r=>r.id===exercise.id):undefined;
+    if(jupyterConnected&&k){
+      const setup=await k.execute(lesson.setup,undefined,{storeHistory:false});
+      if(setup.status!=='ok'){update(setup.outputs,undefined,'Ô chuẩn bị gặp lỗi.');return;}
+      // Xóa các hàm và lớp của bài khỏi kernel trước khi chạy, để kết quả chấm phản ánh đúng code đang có trong ô.
+      if(names.length)await k.execute(`for _n in ${JSON.stringify(names)}:\n    globals().pop(_n, None)`,undefined,{storeHistory:false});
+      const result=await k.execute(codes[exercise.id],s=>update(s.outputs));
+      if(result.status!=='ok'){update(result.outputs,undefined,'Ô bài làm gặp lỗi hoặc đã bị ngắt.');return;}
+      const graded=await k.execute(exercise.test,undefined,{storeHistory:false});
+      const parsed=extractReports(graded.outputs);
+      const report=graded.status==='ok'?parsed.reports.find(r=>r.id===exercise.id):undefined;
+      const complete=Boolean(report&&report.checks.length&&report.checks.every(c=>c.ok));
+      update([...result.outputs,...parsed.outputs],report,report?undefined:'Ô kiểm tra không trả về kết quả hợp lệ.');
+      change({grades:{...progress.grades,[exercise.id]:complete}});
+      return;
+    }
+    const pk=await ensurePyodide();
+    const setup=await pk.run(lesson.setup);
+    if(!setup.ok){update(normalizeOutputs(setup.outputs),undefined,'Ô chuẩn bị gặp lỗi.');return;}
+    if(names.length)await pk.run(`for _n in ${JSON.stringify(names)}:\n    globals().pop(_n, None)`);
+    const result=await pk.run(codes[exercise.id]);
+    const resOut=normalizeOutputs(result.outputs);
+    if(!result.ok){update(resOut,undefined,'Ô bài làm gặp lỗi hoặc đã bị ngắt.');return;}
+    const graded=await pk.run(exercise.test);
+    const parsed=extractReports(normalizeOutputs(graded.outputs));
+    const report=graded.ok?parsed.reports.find(r=>r.id===exercise.id):undefined;
     const complete=Boolean(report&&report.checks.length&&report.checks.every(c=>c.ok));
-    update([...result.outputs,...parsed.outputs],report,report?undefined:'Ô kiểm tra không trả về kết quả hợp lệ.');
+    update([...resOut,...parsed.outputs],report,report?undefined:'Ô kiểm tra không trả về kết quả hợp lệ.');
     change({grades:{...progress.grades,[exercise.id]:complete}});
+    setNotice('Đã chạy và chấm xong trong trình duyệt.');
   }
-  async function save() {
+  function buildNotebookData() {
     const cells:PageCell[]=[{kind:'markdown',source:`# Ngày ${id} · ${lesson.title}`},{kind:'code',source:lesson.setup,tag:'setup'}];
     for(const e of lesson.exercises){
       cells.push({kind:'markdown',source:e.title},{kind:'code',source:codes[e.id],tag:e.id,outputs:runs[e.id]?.output},{kind:'code',source:e.test,tag:`${e.id}-check`});
     }
-    await client.current!.saveNotebook(workPath,toNotebook(cells,lesson.title));
+    return toNotebook(cells,lesson.title);
+  }
+  function exportNotebook() {
+    download(file,JSON.stringify(buildNotebookData(),null,2),'application/x-ipynb+json');
+    setNotice(`Đã tải ${file}`);
+  }
+  async function save() {
+    await client.current!.saveNotebook(workPath,buildNotebookData());
     setHasSaved(true);setNotice(`Đã lưu ${workPath}`);
   }
   async function load() {
@@ -135,18 +205,26 @@ function DayPage({lesson,progress,change,onBusy,openDay}:{lesson:Lesson;progress
       const cell=saved.cells.find(c=>c.cell_type==='code'&&c.metadata?.tags?.includes(e.id));
       values[e.id]=cell?(Array.isArray(cell.source)?cell.source.join(''):cell.source):e.starter;
     }
-    setCodes(values);setRuns({});setNotice('Đã nạp bài đã lưu.');
+    setCodes(values);persistDayCodes(id,values);setRuns({});setNotice('Đã nạp bài đã lưu.');
   }
   function edit(exerciseId:string,value:string) {
-    setCodes(old=>({...old,[exerciseId]:value}));
+    setCodes(old=>{const next={...old,[exerciseId]:value};persistDayCodes(id,next);return next;});
     setRuns(old=>old[exerciseId]?{...old,[exerciseId]:{output:[],attempted:old[exerciseId].attempted}}:old);
     if(progress.grades[exerciseId])change({grades:{...progress.grades,[exerciseId]:false}});
   }
   const connected=status==='idle'||status==='busy';
   const prev=id>1?content[id-2]:undefined;
   const terminalAction=async(kind:'interrupt'|'restart')=>{
-    try{await client.current?.[kind](); if(kind==='restart')setNotice('Kernel đã khởi động lại.');}
-    catch(error){setNotice(errorText(error));}
+    try{
+      if(connected){
+        await client.current?.[kind]();
+        if(kind==='restart')setNotice('Kernel Jupyter đã khởi động lại.');
+      }else if(kind==='interrupt'){
+        pyKernel.current?.dispose();pyKernel.current=null;setPyReady(false);setNotice('Đã dừng Python trong trình duyệt.');
+      }else{
+        await pyKernel.current?.reset();setNotice('Đã khởi động lại biến Python trong trình duyệt.');
+      }
+    }catch(error){setNotice(errorText(error));}
   };
   return <>
     <header className="page-heading"><button className="btn-outline" onClick={()=>openDay()}>Lộ trình Python → ML</button><h1>Ngày {id} · {lesson.title}</h1>
@@ -162,20 +240,24 @@ function DayPage({lesson,progress,change,onBusy,openDay}:{lesson:Lesson;progress
       {id!==4&&id!==5&&<CodeTrace lesson={lesson}/>}
     </SimulationStudio>
     <section className="panel py30-section"><h2>Đọc có chủ đích</h2><ul>{lesson.reads.map(r=><li key={r}>{r}</li>)}</ul></section>
-    <section className="panel py30-section"><h2>Lab bằng Python trên máy</h2>
-      <p>Để chạy trong trang, mở <code>Mo_Jupyter_Studio.command</code> rồi truy cập địa chỉ launcher in ra. Gói thực hành có notebook và dữ liệu UCI dùng khi chưa tải Kaggle.</p>
+    <section className="panel py30-section"><h2>Lab bằng Python trực tiếp</h2>
+      <p>{connected?'Đang kết nối Jupyter trên máy bạn — bài chạy trên Python kernel cục bộ và lưu trực tiếp vào thư mục bài làm.':'Chạy và chấm tự động trực tiếp trong trình duyệt (Pyodide) — không cần cài đặt. Bài làm được lưu tự động trên trình duyệt và có thể tải về dạng .ipynb.'}</p>
       <div className="py30-kernel" role="group" aria-label="Điều khiển kernel">
-        <strong role="status">Kernel · {labels[status]}</strong>
-        <button className="btn-primary" disabled={working||connected} onClick={()=>void runAction(connect)}>Kết nối</button>
-        <button className="btn-outline" disabled={!(working&&connected)} onClick={()=>void terminalAction('interrupt')}>Interrupt</button>
-        <button className="btn-outline" disabled={working||!connected} onClick={()=>void runAction(()=>terminalAction('restart'))}>Khởi động lại</button>
-        <button className="btn-outline" disabled={working||!connected} onClick={()=>void runAction(save)}>Lưu vào py30/bai_lam/</button>
-        <button className="btn-outline" disabled={working||!connected} onClick={()=>void runAction(load)}>Nạp bài đã lưu</button>
-        {connected&&<a className="btn-outline" href={openInJupyterHref(hasSaved?workPath:modelPath)} target="_blank" rel="noreferrer">Mở trong Jupyter {hasSaved?'(bài đã lưu)':'(bản mẫu)'}</a>}
+        <strong role="status">{connected?`Jupyter trên máy · ${labels[status]}`:`Python trình duyệt · ${working?'Đang chạy':pyReady?'Sẵn sàng':'Tự tải khi bấm Chạy'}`}</strong>
+        <button className="btn-outline" disabled={!working} onClick={()=>void terminalAction('interrupt')}>Interrupt</button>
+        <button className="btn-outline" disabled={working||(!connected&&!pyReady)} onClick={()=>void runAction(()=>terminalAction('restart'))}>Khởi động lại</button>
+        <button className="btn-outline" disabled={working} onClick={exportNotebook}>Tải .ipynb bài làm</button>
+        {connected&&<>
+          <button className="btn-outline" disabled={working} onClick={()=>void runAction(save)}>Lưu vào py30/bai_lam/</button>
+          <button className="btn-outline" disabled={working} onClick={()=>void runAction(load)}>Nạp bài đã lưu</button>
+          <a className="btn-outline" href={openInJupyterHref(hasSaved?workPath:modelPath)} target="_blank" rel="noreferrer">Mở trong Jupyter {hasSaved?'(bài đã lưu)':'(bản mẫu)'}</a>
+        </>}
+        {!connected&&isLocalHost&&<button className="btn-outline" disabled={working} onClick={()=>void runAction(connect)}>Kết nối Jupyter trên máy</button>}
       </div>
+      {!connected&&!isLocalHost&&<details><summary>Tùy chọn: Chạy bằng Jupyter trên máy cá nhân</summary><p className="small-note">Khi tải mã nguồn về máy, mở <code>Mo_Jupyter_Studio.command</code> rồi mở địa chỉ localhost Terminal in ra để kết nối Jupyter kernel cục bộ và lưu thẳng vào <code>py30/bai_lam/</code>.</p></details>}
       {notice&&<p role="status">{notice}</p>}
       {lesson.exercises.map(e=>{
-        const run=runs[e.id],canRun=connected&&!working;
+        const run=runs[e.id],canRun=!working;
         return <article className="py30-exercise" key={e.id}>
           <h3>{e.title}</h3><p>Trạng thái: {progress.grades[e.id]===true?'Đạt':progress.grades[e.id]===false?'Chưa đạt':'Chưa chạy'}</p>
           <PythonEditor value={codes[e.id]} onChange={v=>edit(e.id,v)} ariaLabel={'Code '+e.title} rows={Math.min(14,Math.max(5,codes[e.id].split('\n').length))} disabled={working} onRun={()=>{if(canRun)void runAction(()=>runExercise(e));}}/>
@@ -199,7 +281,7 @@ export function PythonTrack({day,openDay,onBusy}:{day?:number;openDay:(day?:numb
   const [progress,setProgress]=useState(loadProgress),[message,setMessage]=useState('');
   useEffect(()=>{try{localStorage.setItem(storageKey,JSON.stringify(progress));}catch{setMessage('Không ghi được tiến độ trong trình duyệt. Bạn có thể xuất bản JSON.');}},[progress]);
   const lesson=day?content[day-1]:undefined;
-  if(lesson)return <DayPage lesson={lesson} progress={progress.days[lesson.id]??emptyDay()} onBusy={onBusy} openDay={openDay}
+  if(lesson)return <DayPage key={lesson.id} lesson={lesson} progress={progress.days[lesson.id]??emptyDay()} onBusy={onBusy} openDay={openDay}
     change={patch=>setProgress(old=>({version:1,days:{...old.days,[lesson.id]:{...(old.days[lesson.id]??emptyDay()),...patch}}}))}/>;
   if(day)return <section className="panel py30-section"><h1>Ngày {day} · Đang trong lộ trình</h1><p>Buổi này sẽ mở sau khi nội dung tuần trước được duyệt.</p><button className="btn-primary" onClick={()=>openDay()}>Quay lại lộ trình</button></section>;
   return <><header className="page-heading"><h1>Python → ML 30 ngày</h1><p>Dành cho bạn đã vững Python và mới học Machine Learning. Mỗi buổi 180 phút, từ mô phỏng đến tự cài thuật toán và thử trên dự án.</p></header>

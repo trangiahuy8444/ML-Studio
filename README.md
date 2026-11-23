@@ -17,7 +17,7 @@ Web app học Machine Learning cho người đã vững Python: trực quan hóa
 
 Vào **Settings → Pages → Build and deployment → Source** và chọn **GitHub Actions**. Mỗi lần push lên `main`, workflow `.github/workflows/pages.yml` sẽ chạy test, build và đăng trang.
 
-Trên GitHub Pages, phần bài học, mô phỏng và bản đồ thuật toán chạy được ngay. **Ô bài tập chấm bằng Jupyter cần kernel trên máy bạn**: launcher chỉ cấp token cho trang mở từ `localhost`, nên để làm bài hãy chạy web qua launcher như dưới đây.
+Trên GitHub Pages, toàn bộ bài học, mô phỏng, **6 chương học**, **8 dự án**, **notebook thực hành** và **lộ trình Python → ML 30 ngày** đều có thể chạy và chấm bài Python trực tiếp ngay trên trình duyệt (qua Pyodide/WebAssembly) mà không cần cài đặt gì thêm. Nếu muốn dùng Jupyter Notebook truyền thống và lưu trực tiếp tệp `.ipynb` trên máy, bạn có thể chạy qua launcher cục bộ như dưới đây.
 
 ## Chạy trên máy (có bài tập chấm tự động)
 
