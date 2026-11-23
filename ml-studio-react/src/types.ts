@@ -9,7 +9,7 @@ export interface Phase {id:number;title:string;range:[number,number];goal:string
 export interface Course {phases:Phase[];days:Day[];resources:{id:string;title:string;path:string;note:string}[];fullStudyPlan:string;deploymentPlan:string}
 export interface DayProgress {a:boolean;b:boolean;c:boolean;review:boolean;note:string}
 export interface Progress {version:1;days:Record<string,DayProgress>;assessment?:AssessmentState}
-export type Route={kind:'home'}|{kind:'project'}|{kind:'overview'}|{kind:'phase';id:number}|{kind:'day';id:number}|{kind:'exercises'}|{kind:'resources'}|{kind:'lab'}|{kind:'py';id?:number}|{kind:'gnn'}|{kind:'assessments'}|{kind:'guide';id?:number}|{kind:'projects'}|{kind:'proj';id:ProjectId};
+export type Route={kind:'home'}|{kind:'curriculum'}|{kind:'module';id:number}|{kind:'unit';id:string}|{kind:'project'}|{kind:'overview'}|{kind:'phase';id:number}|{kind:'day';id:number}|{kind:'exercises'}|{kind:'resources'}|{kind:'lab'}|{kind:'py';id?:number}|{kind:'gnn'}|{kind:'assessments'}|{kind:'guide';id?:number}|{kind:'projects'}|{kind:'proj';id:ProjectId};
 export interface PlotTrace {type:string;[key:string]:unknown}
 export interface PlotApi {react:(el:HTMLElement,traces:PlotTrace[],layout:Record<string,unknown>,config:Record<string,unknown>)=>Promise<void>;purge:(el:HTMLElement)=>void;Plots:{resize:(el:HTMLElement)=>void}}
 export interface KernelResult {ok:boolean;execution_count:number;outputs:Output[];has_plot_epoch:boolean}

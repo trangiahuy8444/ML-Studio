@@ -10,18 +10,20 @@
     "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
+    "@types/katex": "^0.16.8",
+    "highlight.js": "10.7.3",
+    "katex": "^0.19.1",
     "lucide-react": "1.52.0",
-    "highlight.js": "10.7.3"
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   },
   "devDependencies": {
-    "typescript": "5.9.3",
+    "@tailwindcss/vite": "4.3.3",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.2.3",
-    "vite": "8.3.5",
     "@vitejs/plugin-react": "6.1.2",
     "tailwindcss": "4.3.3",
-    "@tailwindcss/vite": "4.3.3"
+    "typescript": "5.9.3",
+    "vite": "8.3.5"
   }
 }
