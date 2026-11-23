@@ -1,4 +1,6 @@
 import { MODULE_01 } from './module01.ts';
+import { MODULE_02 } from './module02.ts';
+import { MODULE_03 } from './module03.ts';
 import type { GradModule, GradResourceItem, GradUnit } from './types.ts';
 
 export type {
@@ -14,59 +16,8 @@ export type {
 
 export const GRAD_MODULES: GradModule[] = [
   MODULE_01,
-  {
-    id: 2,
-    title: 'Mô hình Tuyến tính & GLMs',
-    englishTitle: 'Linear Models & Generalized Linear Models',
-    color: '#84e0a8',
-    status: 'planned',
-    overview:
-      'Phân tích hình học và xác suất của Hồi quy tuyến tính OLS (phép chiếu trực giao & Normal Equations), điều chuẩn Ridge/Lasso từ góc nhìn MAP, phân loại tuyến tính Logistic/Softmax Regression và khung tổng quát Exponential Family GLMs.',
-    outcomes: [
-      'Chứng minh nghiệm OLS qua phép chiếu trực giao và xác định điều kiện suy biến đa cộng tuyến.',
-      'Giải thích sự khác biệt hình học giữa phạt L1 (tạo nghiệm thưa) và phạt L2.',
-      'Dẫn xuất mô hình Logistic, Softmax và hồi quy Poisson từ họ phân phối mũ (Exponential Family).',
-    ],
-    sources: [
-      'UC Berkeley CS189 (Lecture 06–11)',
-      'Stanford CS229 (Part I: Linear Models & GLMs)',
-      'ISLR (Ch. 3–4, Ch. 6)',
-      'Murphy PML (Ch. 10–11)',
-    ],
-    plannedTopics: [
-      'Unit 2.1: OLS dưới góc nhìn Hình học (Phép chiếu) & Xác suất (Gaussian MLE)',
-      'Unit 2.2: Regularization Ridge ($L_2$), Lasso ($L_1$) & ElasticNet từ MAP',
-      'Unit 2.3: Logistic Regression, Softmax & Cross-Entropy',
-      'Unit 2.4: Generalized Linear Models (GLMs) & Exponential Family',
-    ],
-    units: [],
-  },
-  {
-    id: 3,
-    title: 'Tối ưu hóa cho Học máy',
-    englishTitle: 'Optimization for Machine Learning',
-    color: '#ffd173',
-    status: 'planned',
-    overview:
-      'Lý thuyết tối ưu lồi (tập lồi, hàm lồi, điều kiện KKT, Condition Number của ma trận Hessian), phân tích tốc độ hội tụ Gradient Descent, các biến thể Stochastic/Adaptive (SGD, Momentum, Nesterov, RMSProp, Adam) và phương pháp bậc 2 (Newton–Raphson, L-BFGS).',
-    outcomes: [
-      'Chứng minh chặn hội tụ của Gradient Descent trên hàm L-smooth và $\\mu$-strongly convex.',
-      'Chẩn đoán ảnh hưởng của Condition Number $\\kappa(H)$ lên quỹ đạo cập nhật và thiết lập Momentum/Adam.',
-      'Cài đặt SGD, Adam và Newton–Raphson cho bài toán tối ưu lồi không có nghiệm đóng.',
-    ],
-    sources: [
-      'UC Berkeley CS189 (Lecture 12–13)',
-      'Murphy PML (Ch. 8: Optimization)',
-      'Vũ Hữu Tiệp (Ch. 7–8)',
-    ],
-    plannedTopics: [
-      'Unit 3.1: Tập lồi, Hàm lồi, Điều kiện KKT & Condition Number',
-      'Unit 3.2: Gradient Descent & Phân tích tốc độ hội tụ',
-      'Unit 3.3: SGD, Mini-batch, Momentum, Nesterov, RMSProp & Adam',
-      'Unit 3.4: Phương pháp bậc 2: Newton–Raphson & Quasi-Newton (L-BFGS)',
-    ],
-    units: [],
-  },
+  MODULE_02,
+  MODULE_03,
   {
     id: 4,
     title: 'Mô hình Sinh, Kernel & Support Vector Machines',

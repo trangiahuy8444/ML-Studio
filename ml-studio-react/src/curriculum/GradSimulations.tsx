@@ -3,6 +3,7 @@ import { Chart } from '../components/Chart';
 import { solve } from '../lib/domain';
 import type { PlotTrace } from '../types';
 import type { GradSimulationId } from './types';
+import { GradSimulationM23 } from './GradSimulationsM23';
 
 const fmt = (v: number, d = 4) => (Number.isFinite(v) ? v.toFixed(d) : 'NaN');
 
@@ -627,5 +628,5 @@ export function GradSimulation({ id }: { id?: GradSimulationId }) {
   if (id === 'm1-u2') return <SimBetaMap />;
   if (id === 'm1-u3') return <SimBiasVariance />;
   if (id === 'm1-u4') return <SimGeneralizationLeakage />;
-  return null;
+  return <GradSimulationM23 id={id} />;
 }

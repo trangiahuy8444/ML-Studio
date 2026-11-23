@@ -41,7 +41,7 @@ import {
   isUnitComplete,
   loadGradProgress,
 } from './curriculum/CurriculumPages';
-import { GRAD_RESOURCES, allReadyUnits } from './curriculum';
+import { GRAD_MODULES, GRAD_RESOURCES, allReadyUnits } from './curriculum';
 
 const PROGRESS_KEY = 'mlStudioAI30-progress-v1';
 const normalize = (s: string) =>
@@ -426,6 +426,7 @@ export default function App() {
   const patchDay = (id: number, value: DayProgress) =>
     setProgress((old) => ({ ...old, days: { ...old.days, [id]: value } }));
 
+  const readyModulesCount = GRAD_MODULES.filter((m) => m.status === 'ready').length;
   const readyUnits = allReadyUnits();
   const gradStore = loadGradProgress();
   const gradDone = readyUnits.filter((u) => isUnitComplete(u, gradStore.units[u.id])).length;
@@ -511,9 +512,11 @@ export default function App() {
         <ProgressRing value={gradDone} total={readyUnits.length} size={54} stroke={6} />
         <div>
           <strong>
-            {gradDone}/{readyUnits.length} bài Đợt 1
+            {gradDone}/{readyUnits.length} bài sẵn sàng
           </strong>
-          <p>Học phần 1 sẵn sàng · 10 Học phần</p>
+          <p>
+            {readyModulesCount}/{GRAD_MODULES.length} Học phần đã mở
+          </p>
           <button onClick={exportProgress}>
             <Download size={13} /> Xuất tiến độ
           </button>
@@ -599,7 +602,7 @@ export default function App() {
         </button>
         <strong>ML Studio</strong>
         <span>
-          {gradDone}/{readyUnits.length} bài Đợt 1
+          {gradDone}/{readyUnits.length} bài
         </span>
       </header>
       {mobileMenu && <aside className="mobile-menu">{sidebar}</aside>}

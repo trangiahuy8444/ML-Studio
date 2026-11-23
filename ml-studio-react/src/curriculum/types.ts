@@ -28,7 +28,19 @@ export interface GradSeminar {
   guidance: string;
 }
 
-export type GradSimulationId = 'm1-u1' | 'm1-u2' | 'm1-u3' | 'm1-u4';
+export type GradSimulationId =
+  | 'm1-u1'
+  | 'm1-u2'
+  | 'm1-u3'
+  | 'm1-u4'
+  | 'm2-u1'
+  | 'm2-u2'
+  | 'm2-u3'
+  | 'm2-u4'
+  | 'm3-u1'
+  | 'm3-u2'
+  | 'm3-u3'
+  | 'm3-u4';
 
 export interface GradUnit {
   id: string;

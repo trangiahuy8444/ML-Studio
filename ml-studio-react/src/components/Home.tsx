@@ -53,6 +53,7 @@ export function ProgressRing({
 
 export function Home({ navigate }: { progress?: Progress; navigate: (r: Route, anchor?: string) => void }) {
   const [gradStore] = useState(loadGradProgress);
+  const readyModulesCount = GRAD_MODULES.filter((m) => m.status === 'ready').length;
   const readyUnits = allReadyUnits();
   const doneUnits = readyUnits.filter((u) => isUnitComplete(u, gradStore.units[u.id]));
   const nextUnit = readyUnits.find((u) => !isUnitComplete(u, gradStore.units[u.id])) ?? readyUnits[0];
@@ -88,22 +89,24 @@ export function Home({ navigate }: { progress?: Progress; navigate: (r: Route, a
           </div>
         </div>
         <div className="home-hero-ring">
-          <ProgressRing value={doneUnits.length} total={readyUnits.length} label="bài Đợt 1" />
+          <ProgressRing value={doneUnits.length} total={readyUnits.length} label="bài sẵn sàng" />
         </div>
       </section>
 
       <section className="home-stats" aria-label="Thống kê tiến độ cao học">
         <div>
           <Target size={18} />
-          <strong>10</strong>
-          <span>học phần cao học</span>
+          <strong>
+            {readyModulesCount}/{GRAD_MODULES.length}
+          </strong>
+          <span>học phần đã mở</span>
         </div>
         <div>
           <CheckCircle size={18} />
           <strong>
             {doneUnits.length}/{readyUnits.length}
           </strong>
-          <span>bài Học phần 1 đạt chuẩn</span>
+          <span>bài sẵn sàng đạt chuẩn</span>
         </div>
         <div>
           <SquareTerminal size={18} />
@@ -123,7 +126,9 @@ export function Home({ navigate }: { progress?: Progress; navigate: (r: Route, a
         <div className="section-head">
           <div>
             <span className="eyebrow">Cấu trúc toàn khóa · 10 Học phần</span>
-            <h2>Học phần 1 đã sẵn sàng; Học phần 2–10 triển khai theo lộ trình cuốn chiếu</h2>
+            <h2>
+              Học phần 1–{readyModulesCount} đã sẵn sàng ({readyUnits.length} bài); Học phần {readyModulesCount + 1}–{GRAD_MODULES.length} triển khai cuốn chiếu
+            </h2>
           </div>
           <button className="btn-outline" onClick={() => navigate({ kind: 'curriculum' })}>
             Mở toàn bộ lộ trình <ArrowRight size={14} />
@@ -159,7 +164,7 @@ export function Home({ navigate }: { progress?: Progress; navigate: (r: Route, a
                       style={{ cursor: 'pointer' }}
                       onClick={() => navigate({ kind: 'unit', id: u.id })}
                     >
-                      Bài 1.{u.order}
+                      Bài {mod.id}.{u.order}
                     </button>
                   ))}
               </div>

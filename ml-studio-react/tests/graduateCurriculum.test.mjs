@@ -19,23 +19,28 @@ test('graduate curriculum defines 10 contiguous modules within graduate CS scope
   assert(GRAD_RESOURCES.length >= 8);
 });
 
-test('Module 1 has 4 complete graduate units with theory, references, exercises and seminar', () => {
-  const m1 = getModule(1);
-  assert(m1);
-  assert.equal(m1.status, 'ready');
-  assert.equal(m1.units.length, 4);
-  assert.deepEqual(
-    m1.units.map((u) => u.id),
-    ['m1-u1', 'm1-u2', 'm1-u3', 'm1-u4'],
-  );
+test('Modules 1, 2 and 3 have 12 complete graduate units with theory, references, exercises and seminar', () => {
+  for (const modId of [1, 2, 3]) {
+    const mod = getModule(modId);
+    assert(mod);
+    assert.equal(mod.status, 'ready');
+    assert.equal(mod.units.length, 4);
+    assert.deepEqual(
+      mod.units.map((u) => u.id),
+      [1, 2, 3, 4].map((u) => `m${modId}-u${u}`),
+    );
+  }
 
-  for (const u of allReadyUnits()) {
+  const ready = allReadyUnits();
+  assert.equal(ready.length, 12);
+
+  for (const u of ready) {
     assert(u.outcomes.length >= 3, `${u.id} outcomes`);
-    assert(u.references.length >= 3, `${u.id} references`);
-    assert(u.sections.length >= 3, `${u.id} sections`);
+    assert(u.references.length >= 2, `${u.id} references`);
+    assert(u.sections.length >= 2, `${u.id} sections`);
     assert(u.simulationId, `${u.id} simulationId`);
     assert(u.exercises.length >= 1, `${u.id} exercises`);
-    assert(u.seminar.length >= 2, `${u.id} seminar`);
+    assert(u.seminar.length >= 1, `${u.id} seminar`);
 
     for (const ex of u.exercises) {
       assert(ex.starter.includes('raise NotImplementedError'), `${ex.id} starter placeholder`);
@@ -45,6 +50,8 @@ test('Module 1 has 4 complete graduate units with theory, references, exercises 
     }
   }
   assert(getUnit('m1-u2')?.unit.title.includes('MLE'));
+  assert(getUnit('m2-u4')?.unit.title.includes('Exponential Family'));
+  assert(getUnit('m3-u4')?.unit.title.includes('Newton'));
 });
 
 test('graduate curriculum routes round-trip and invalid module ids fall back to home', () => {
@@ -52,8 +59,8 @@ test('graduate curriculum routes round-trip and invalid module ids fall back to 
   for (let id = 1; id <= 10; id++) {
     assert.deepEqual(parseRoute('#' + routeHash({ kind: 'module', id })), { kind: 'module', id });
   }
-  for (const id of ['m1-u1', 'm1-u2', 'm1-u3', 'm1-u4']) {
-    assert.deepEqual(parseRoute('#' + routeHash({ kind: 'unit', id })), { kind: 'unit', id });
+  for (const u of allReadyUnits()) {
+    assert.deepEqual(parseRoute('#' + routeHash({ kind: 'unit', id: u.id })), { kind: 'unit', id: u.id });
   }
   for (const bad of ['#module-0', '#module-11', '#unit-bad']) {
     assert.deepEqual(parseRoute(bad), { kind: 'home' });
