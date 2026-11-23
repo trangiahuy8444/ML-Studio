@@ -5,6 +5,8 @@ import { MODULE_04 } from './module04.ts';
 import { MODULE_05 } from './module05.ts';
 import { MODULE_06 } from './module06.ts';
 import { MODULE_07 } from './module07.ts';
+import { MODULE_08 } from './module08.ts';
+import { MODULE_09 } from './module09.ts';
 import type { GradModule, GradResourceItem, GradUnit } from './types.ts';
 
 export type {
@@ -26,59 +28,8 @@ export const GRAD_MODULES: GradModule[] = [
   MODULE_05,
   MODULE_06,
   MODULE_07,
-  {
-    id: 8,
-    title: 'Xử lý Ngôn ngữ Tự nhiên, Transformer & LLMs',
-    englishTitle: 'NLP, Transformers & Large Language Models',
-    color: '#c084fc',
-    status: 'planned',
-    overview:
-      'Từ biểu diễn từ tĩnh Word2Vec (Skip-gram, CBOW, Negative Sampling) tới mạng hồi tiếp RNN/LSTM giải quyết triệt tiêu gradient; cơ chế Bahdanau Attention trong Seq2Seq; kiến trúc Transformer (Scaled Dot-Product, Multi-Head Attention, Positional Encoding); và các mô hình tiền huấn luyện (BERT, PhoBERT tiếng Việt, GPT, Fine-tuning & RAG).',
-    outcomes: [
-      'Dẫn xuất hàm mục tiêu Negative Sampling của Word2Vec và phân tích cơ chế cổng giữ luồng gradient trong LSTM.',
-      'Cài đặt đầy đủ Scaled Dot-Product Multi-Head Attention và Causal Mask từ đầu.',
-      'Đánh giá quy trình tiền huấn luyện và tinh chỉnh mô hình ngôn ngữ (bao gồm PhoBERT cho tiếng Việt & RAG có trích dẫn).',
-    ],
-    sources: [
-      'Mikolov et al. (2013) — Word2Vec & Negative Sampling',
-      'Hochreiter & Schmidhuber (1997) — LSTM; Goldberg (2016)',
-      'Bahdanau et al. (2015); Vaswani et al. (2017) — Attention Is All You Need',
-      'Nguyen & Nguyen (2020) — PhoBERT; Jurafsky & Martin (Ch. 5, 14)',
-    ],
-    plannedTopics: [
-      'Unit 8.1: Word2Vec (Skip-gram, CBOW, Negative Sampling) & Dense Embeddings',
-      'Unit 8.2: RNN, BPTT & LSTM/GRU (Giải quyết Gradient triệt tiêu)',
-      'Unit 8.3: Seq2Seq & Cơ chế Bahdanau Attention',
-      'Unit 8.4: Transformer (Multi-Head Attention, Positional Encoding, LayerNorm)',
-      'Unit 8.5: Pre-trained LMs (BERT, PhoBERT tiếng Việt, GPT), Fine-tuning & RAG',
-    ],
-    units: [],
-  },
-  {
-    id: 9,
-    title: 'Học trên Dữ liệu Đồ thị (Graph Neural Networks)',
-    englishTitle: 'Graph Representation Learning & GNNs',
-    color: '#2dd4bf',
-    status: 'planned',
-    overview:
-      'Lý thuyết phổ đồ thị (Graph Laplacian & Spectral Convolutions), khung truyền thông điệp tổng quát (Message Passing — MPNN), phân tích toán học các kiến trúc chuẩn GCN (Kipf & Welling), GraphSAGE, Graph Attention Networks (GAT), bài toán phân loại Nút/Cạnh/Đồ thị và đồ thị động (Dynamic Graphs).',
-    outcomes: [
-      'Phân tích phổ trị riêng của ma trận Graph Laplacian chuẩn hóa và phép xấp xỉ bậc nhất Chebyshev trong GCN.',
-      'Cài đặt lớp truyền thông điệp GCN và Masked Softmax Attention (GAT) bảo toàn tính bất biến hoán vị nút.',
-      'Thiết kế quy trình chia tập và đánh giá hợp lệ cho bài toán trên một đồ thị lớn (Transductive) và nhiều đồ thị (Inductive).',
-    ],
-    sources: [
-      'Zhiyuan Liu & Jie Zhou — Introduction to Graph Neural Networks (§2.3, Ch. 4–5, Ch. 7, Ch. 11)',
-      'Phòng lab GNN tích hợp sẵn trên ML Studio',
-    ],
-    plannedTopics: [
-      'Unit 9.1: Graph Laplacian & Spectral Graph Convolutions',
-      'Unit 9.2: Khung Message Passing (MPNN) & Tính đẳng biến hoán vị',
-      'Unit 9.3: Kiến trúc GCN, GraphSAGE & Graph Attention Networks (GAT)',
-      'Unit 9.4: Phân loại Nút/Cạnh/Đồ thị & Đánh giá Đồ thị động',
-    ],
-    units: [],
-  },
+  MODULE_08,
+  MODULE_09,
   {
     id: 10,
     title: 'Học Tăng cường & Đồ án Nghiên cứu Cao học',
