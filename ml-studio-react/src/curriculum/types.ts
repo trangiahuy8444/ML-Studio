@@ -47,7 +47,15 @@ export type GradSimulationId =
   | 'm5-u1'
   | 'm5-u2'
   | 'm5-u3'
-  | 'm5-u4';
+  | 'm5-u4'
+  | 'm6-u1'
+  | 'm6-u2'
+  | 'm6-u3'
+  | 'm6-u4'
+  | 'm7-u1'
+  | 'm7-u2'
+  | 'm7-u3'
+  | 'm7-u4';
 
 export interface GradUnit {
   id: string;

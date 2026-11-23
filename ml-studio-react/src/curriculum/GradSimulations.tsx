@@ -5,6 +5,7 @@ import type { PlotTrace } from '../types';
 import type { GradSimulationId } from './types';
 import { GradSimulationM23 } from './GradSimulationsM23';
 import { GradSimulationM45 } from './GradSimulationsM45';
+import { GradSimulationM67 } from './GradSimulationsM67';
 
 const fmt = (v: number, d = 4) => (Number.isFinite(v) ? v.toFixed(d) : 'NaN');
 
@@ -630,5 +631,6 @@ export function GradSimulation({ id }: { id?: GradSimulationId }) {
   if (id === 'm1-u3') return <SimBiasVariance />;
   if (id === 'm1-u4') return <SimGeneralizationLeakage />;
   if (id.startsWith('m2-') || id.startsWith('m3-')) return <GradSimulationM23 id={id} />;
-  return <GradSimulationM45 id={id} />;
+  if (id.startsWith('m4-') || id.startsWith('m5-')) return <GradSimulationM45 id={id} />;
+  return <GradSimulationM67 id={id} />;
 }

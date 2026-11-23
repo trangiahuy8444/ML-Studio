@@ -19,8 +19,8 @@ test('graduate curriculum defines 10 contiguous modules within graduate CS scope
   assert(GRAD_RESOURCES.length >= 8);
 });
 
-test('Modules 1 to 5 have 19 complete graduate units with theory, references, exercises and seminar', () => {
-  const expectedCounts = { 1: 4, 2: 4, 3: 4, 4: 3, 5: 4 };
+test('Modules 1 to 7 have 27 complete graduate units with theory, references, exercises and seminar', () => {
+  const expectedCounts = { 1: 4, 2: 4, 3: 4, 4: 3, 5: 4, 6: 4, 7: 4 };
   for (const [modIdStr, count] of Object.entries(expectedCounts)) {
     const modId = Number(modIdStr);
     const mod = getModule(modId);
@@ -34,8 +34,8 @@ test('Modules 1 to 5 have 19 complete graduate units with theory, references, ex
   }
 
   const ready = allReadyUnits();
-  assert.equal(ready.length, 19);
-  assert.equal(ready.reduce((sum, u) => sum + u.exercises.length, 0), 30);
+  assert.equal(ready.length, 27);
+  assert.equal(ready.reduce((sum, u) => sum + u.exercises.length, 0), 40);
 
   for (const u of ready) {
     assert(u.outcomes.length >= 3, `${u.id} outcomes`);
@@ -57,6 +57,8 @@ test('Modules 1 to 5 have 19 complete graduate units with theory, references, ex
   assert(getUnit('m3-u4')?.unit.title.includes('Newton'));
   assert(getUnit('m4-u3')?.unit.title.includes('Kernel'));
   assert(getUnit('m5-u4')?.unit.title.includes('XGBoost'));
+  assert(getUnit('m6-u3')?.unit.title.includes('EM'));
+  assert(getUnit('m7-u4')?.unit.title.includes('CNN'));
 });
 
 test('graduate curriculum routes round-trip and invalid module ids fall back to home', () => {

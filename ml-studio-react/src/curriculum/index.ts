@@ -3,6 +3,8 @@ import { MODULE_02 } from './module02.ts';
 import { MODULE_03 } from './module03.ts';
 import { MODULE_04 } from './module04.ts';
 import { MODULE_05 } from './module05.ts';
+import { MODULE_06 } from './module06.ts';
+import { MODULE_07 } from './module07.ts';
 import type { GradModule, GradResourceItem, GradUnit } from './types.ts';
 
 export type {
@@ -22,58 +24,8 @@ export const GRAD_MODULES: GradModule[] = [
   MODULE_03,
   MODULE_04,
   MODULE_05,
-  {
-    id: 6,
-    title: 'Học Không giám sát & Mô hình Biến tiềm ẩn',
-    englishTitle: 'Unsupervised Learning & Latent Variable Models',
-    color: '#ff9b6a',
-    status: 'planned',
-    overview:
-      'Thuật toán phân cụm K-means, Hierarchical và Spectral Clustering (Graph Cut); ước lượng mật độ KDE và Gaussian Mixture Models (GMM); chứng minh hội tụ thuật toán EM qua Bất đẳng thức Jensen; giảm chiều PCA qua SVD, Kernel PCA và trực quan hóa phi tuyến t-SNE/UMAP.',
-    outcomes: [
-      'Chứng minh bước E và bước M trong thuật toán EM đảm bảo Log-Likelihood không giảm nhờ Bất đẳng thức Jensen.',
-      'Liên hệ PCA dưới hai góc nhìn tương đương: cực đại hóa phương sai chiếu và tối thiểu hóa sai số tái tạo via SVD.',
-      'Áp dụng GMM và Spectral Clustering trên các cấu trúc cụm phi lồi.',
-    ],
-    sources: [
-      'UC Berkeley CS189 (Lecture 04–05: K-means, Density Estimation & GMM)',
-      'Stanford CS229 (Part IV: Unsupervised Learning, PCA, EM)',
-      'Murphy PML (Ch. 20–21)',
-    ],
-    plannedTopics: [
-      'Unit 6.1: Phân cụm: K-means, Hierarchical & Spectral Clustering',
-      'Unit 6.2: Ước lượng mật độ (KDE) & Gaussian Mixture Models (GMM)',
-      'Unit 6.3: Thuật toán Expectation-Maximization (EM) & Bất đẳng thức Jensen',
-      'Unit 6.4: Giảm chiều: PCA (SVD), Kernel PCA, ICA & t-SNE/UMAP',
-    ],
-    units: [],
-  },
-  {
-    id: 7,
-    title: 'Deep Learning & Thị giác Máy tính',
-    englishTitle: 'Deep Neural Networks & Computer Vision',
-    color: '#38bdf8',
-    status: 'planned',
-    overview:
-      'Biểu diễn ảnh số và các kỹ thuật xử lý ảnh cổ điển (Filtering, Histogram Equalization, Edge Detection, OpenCV); MLP, Định lý Xấp xỉ Phổ quát và Reverse-mode Autodiff (Backpropagation); kỹ thuật huấn luyện mạng rất sâu (Xavier/He Init, BatchNorm/LayerNorm, Residual Connections) và kiến trúc CNN đến Vision Transformer.',
-    outcomes: [
-      'Cài đặt cơ chế Reverse-mode Automatic Differentiation (tính toán đồ thị và lan truyền ngược) bằng NumPy.',
-      'Hiểu bản chất bất biến dịch chuyển, trường tiếp nhận (Receptive Field) của tầng Conv2D và tác dụng của Skip Connection.',
-      'Kết hợp tiền xử lý thị giác cổ điển với mạng CNN hiện đại cho bài toán phân loại ảnh.',
-    ],
-    sources: [
-      'Thư mục 05_Thi_giac_May_tinh_Computer_Vision (C1–C3, Bai1–3)',
-      'Stanford CS229 (Deep Learning Notes)',
-      'Murphy PML (Ch. 13–14)',
-    ],
-    plannedTopics: [
-      'Unit 7.1: Biểu diễn ảnh & Xử lý ảnh cổ điển (Filtering, Histogram, OpenCV)',
-      'Unit 7.2: MLP, Universal Approximation & Reverse-mode Autodiff (Backprop)',
-      'Unit 7.3: Huấn luyện mạng sâu: Xavier/He Init, BatchNorm, Dropout & Residual',
-      'Unit 7.4: Kiến trúc CNN (Conv, Pooling, Receptive Field, ResNet → ViT)',
-    ],
-    units: [],
-  },
+  MODULE_06,
+  MODULE_07,
   {
     id: 8,
     title: 'Xử lý Ngôn ngữ Tự nhiên, Transformer & LLMs',
