@@ -19,20 +19,23 @@ test('graduate curriculum defines 10 contiguous modules within graduate CS scope
   assert(GRAD_RESOURCES.length >= 8);
 });
 
-test('Modules 1, 2 and 3 have 12 complete graduate units with theory, references, exercises and seminar', () => {
-  for (const modId of [1, 2, 3]) {
+test('Modules 1 to 5 have 19 complete graduate units with theory, references, exercises and seminar', () => {
+  const expectedCounts = { 1: 4, 2: 4, 3: 4, 4: 3, 5: 4 };
+  for (const [modIdStr, count] of Object.entries(expectedCounts)) {
+    const modId = Number(modIdStr);
     const mod = getModule(modId);
     assert(mod);
     assert.equal(mod.status, 'ready');
-    assert.equal(mod.units.length, 4);
+    assert.equal(mod.units.length, count);
     assert.deepEqual(
       mod.units.map((u) => u.id),
-      [1, 2, 3, 4].map((u) => `m${modId}-u${u}`),
+      Array.from({ length: count }, (_, idx) => `m${modId}-u${idx + 1}`),
     );
   }
 
   const ready = allReadyUnits();
-  assert.equal(ready.length, 12);
+  assert.equal(ready.length, 19);
+  assert.equal(ready.reduce((sum, u) => sum + u.exercises.length, 0), 30);
 
   for (const u of ready) {
     assert(u.outcomes.length >= 3, `${u.id} outcomes`);
@@ -52,6 +55,8 @@ test('Modules 1, 2 and 3 have 12 complete graduate units with theory, references
   assert(getUnit('m1-u2')?.unit.title.includes('MLE'));
   assert(getUnit('m2-u4')?.unit.title.includes('Exponential Family'));
   assert(getUnit('m3-u4')?.unit.title.includes('Newton'));
+  assert(getUnit('m4-u3')?.unit.title.includes('Kernel'));
+  assert(getUnit('m5-u4')?.unit.title.includes('XGBoost'));
 });
 
 test('graduate curriculum routes round-trip and invalid module ids fall back to home', () => {

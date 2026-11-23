@@ -1,6 +1,8 @@
 import { MODULE_01 } from './module01.ts';
 import { MODULE_02 } from './module02.ts';
 import { MODULE_03 } from './module03.ts';
+import { MODULE_04 } from './module04.ts';
+import { MODULE_05 } from './module05.ts';
 import type { GradModule, GradResourceItem, GradUnit } from './types.ts';
 
 export type {
@@ -18,56 +20,8 @@ export const GRAD_MODULES: GradModule[] = [
   MODULE_01,
   MODULE_02,
   MODULE_03,
-  {
-    id: 4,
-    title: 'Mô hình Sinh, Kernel & Support Vector Machines',
-    englishTitle: 'Generative Classifiers, Kernel Methods & SVM',
-    color: '#f28db9',
-    status: 'planned',
-    overview:
-      'So sánh hệ hình Generative vs Discriminative; phân tích Gaussian Discriminant Analysis (LDA/QDA) và Naive Bayes; lý thuyết lề cực đại Hard/Soft-Margin SVM (Primal & Lagrangian Dual); Kernel Trick, Định lý Mercer và không gian RKHS.',
-    outcomes: [
-      'Dẫn xuất biên quyết định tuyến tính (LDA) và bậc hai (QDA) từ giả định Gaussian.',
-      'Chuyển đổi bài toán SVM từ dạng gốc (Primal) sang dạng đối ngẫu (Dual) bằng nhân tử Lagrange.',
-      'Thiết kế hàm nhân RBF/Polynomial hợp lệ theo điều kiện Mercer và phân tích vai trò Support Vectors.',
-    ],
-    sources: [
-      'Stanford CS229 (Part II–III: Generative Algorithms & Kernel Methods/SVM)',
-      'Murphy PML (Ch. 9, Ch. 17)',
-      'Vũ Hữu Tiệp (Ch. 19–22)',
-    ],
-    plannedTopics: [
-      'Unit 4.1: Generative vs. Discriminative; GDA (LDA/QDA) & Naive Bayes',
-      'Unit 4.2: Maximum Margin Classifier & Hard/Soft-Margin SVM (Primal & Dual)',
-      'Unit 4.3: Kernel Trick, Định lý Mercer & RKHS (RBF, Polynomial Kernels)',
-    ],
-    units: [],
-  },
-  {
-    id: 5,
-    title: 'Phương pháp Phi tham số & Học Tổ hợp',
-    englishTitle: 'Nonparametric Models & Ensemble Learning',
-    color: '#a8a7ff',
-    status: 'planned',
-    overview:
-      'Học dựa trên láng giềng KNN và lời nguyền chiều cao (Curse of Dimensionality); Cây quyết định CART (Gini, Entropy, tỉa nhánh); Bagging & Random Forests; và các thuật toán Boosting tuần tự (AdaBoost, Gradient Boosting / GBDT).',
-    outcomes: [
-      'Chứng minh lý do khoảng cách Euclid mất khả năng phân biệt trong không gian rất nhiều chiều.',
-      'Cài đặt hàm tách nút cây quyết định theo Information Gain và Gini Impurity.',
-      'Phân tích vì sao Bagging giảm Variance còn Boosting (GBDT) giảm chủ yếu Bias.',
-    ],
-    sources: [
-      'ISLR (Ch. 8: Tree-Based Methods)',
-      'Murphy PML (Ch. 16, Ch. 18)',
-    ],
-    plannedTopics: [
-      'Unit 5.1: KNN, Metric Learning & Curse of Dimensionality',
-      'Unit 5.2: Decision Trees (CART, Gini/Entropy, Pruning)',
-      'Unit 5.3: Bagging & Random Forests (Giảm phương sai)',
-      'Unit 5.4: Boosting: AdaBoost & Gradient Boosting (GBDT / XGBoost)',
-    ],
-    units: [],
-  },
+  MODULE_04,
+  MODULE_05,
   {
     id: 6,
     title: 'Học Không giám sát & Mô hình Biến tiềm ẩn',
