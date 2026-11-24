@@ -1,7 +1,7 @@
 import {useMemo,useState} from 'react';
 import type {Route} from '../types';
 import {Bars,LineChart,ProjectFrame,Slider,Stat,fmt,pct} from './ui';
-import type {StepDef} from './ui';
+import type {StepDef,ReverseDef} from './ui';
 
 // 14 bài báo giả lập. topic 1 = thị giác máy tính, 0 = xử lý ngôn ngữ.
 // feature = tỉ lệ từ khóa về ảnh trong tóm tắt; vài bài cố tình gây nhiễu (bài 4, 9, 12).
@@ -47,7 +47,6 @@ function Graph({values,edges,extra=[],guess,onNode,showValues=true}:{values?:num
 }
 
 export function GnnProject({navigate}:{navigate:(r:Route,anchor?:string)=>void}){
-  const [step,setStep]=useState(0);
   const [guess,setGuess]=useState<(0|1|null)[]>(()=>NODES.map(()=>null));
   const [revealed,setRevealed]=useState(false);
   const [thr,setThr]=useState(.5),[layers,setLayers]=useState(1),[noise,setNoise]=useState(0),[layers4,setLayers4]=useState(2);
@@ -91,5 +90,12 @@ export function GnnProject({navigate}:{navigate:(r:Route,anchor?:string)=>void})
       visual:<Bars rows={[{label:'Chỉ nội dung',value:accOf(clean[0])},{label:'1 lớp',value:byLayer[1]},{label:'2 lớp',value:byLayer[2]},{label:'2 lớp + 6 cạnh nhiễu',value:noiseCurve[5],color:'var(--gold)'},{label:'2 lớp + 12 cạnh nhiễu',value:noiseCurve.at(-1)!,color:'var(--pink)'}]} max={1} format={v=>pct(v)}/>,
       takeaway:'Quan hệ giữa các mẫu là một nguồn thông tin riêng. Khi dữ liệu có dạng mạng lưới (trích dẫn, bạn bè, phân tử), hãy nghĩ tới việc để mô hình đọc cả các cạnh.'},
   ];
-  return <ProjectFrame id="gnn" steps={steps} step={step} setStep={setStep} navigate={navigate}/>;
+  const reverse:ReverseDef={layers:[
+    {from:2,label:'Dùng sản phẩm',title:'Bộ phân loại bài báo đã chạy.',intro:<p>Với 2 lớp, sản phẩm phân loại đúng cả 10 bài chưa biết. Số trên mỗi nút là điểm “thị giác” của bài. Đặt số lớp = 2 để xem sản phẩm, kéo về 0 để tháo hết.</p>,takeaway:'Ở 0 lớp có bài bị đoán sai; thêm lớp thì sửa được. Vậy sức mạnh nằm ở các lớp truyền thông điệp.'},
+    {from:1,label:'Tháo bỏ cạnh',title:'Chỉ còn nội dung bài báo.',intro:<p>Bỏ hết trích dẫn, chỉ giữ con số của từng bài.</p>,takeaway:'Không có cạnh, độ chính xác còn 70%. Cạnh là bộ phận chính của sản phẩm.'},
+    {from:3,label:'Phá dữ liệu',title:'Cạnh sai thì sao?',intro:<p>Thêm các trích dẫn chéo chủ đề và xem sản phẩm xuống cấp.</p>,takeaway:'Bộ phận cạnh chỉ có ích khi hàng xóm thường giống mình.'},
+    {from:0,label:'Tự làm bằng tay',title:'Em là GNN.',intro:<p>Tự đoán chủ đề 10 bài từ hàng xóm của chúng.</p>,takeaway:'Em vừa làm truyền thông điệp bằng mắt: nhìn hàng xóm rồi quyết định.'},
+    {from:4,label:'Bản thiết kế',title:'Bản vẽ của GNN thật.',intro:<p>GCN làm đúng điều em vừa tháo ra, chỉ thêm một ma trận trọng số học được và hàm kích hoạt: <b>h′ = σ(W · trung bình(h của mình và hàng xóm))</b>.</p>,takeaway:'Em đã đi từ sản phẩm đến bản thiết kế. Giờ có thể đọc code GCN thật mà biết từng dòng làm gì.'},
+  ]};
+  return <ProjectFrame id="gnn" steps={steps} reverse={reverse} navigate={navigate}/>;
 }

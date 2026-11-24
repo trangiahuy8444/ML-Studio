@@ -3,7 +3,7 @@ import type {ReactNode} from 'react';
 import type {Route} from '../types';
 import iris from '../track-py/data/iris2d.json';
 import {LineChart,PALETTE,Plot,ProjectFrame,Segmented,Slider,Stat,fmt,pct,rng,shuffled} from './ui';
-import type {Scale,StepDef} from './ui';
+import type {Scale,StepDef,ReverseDef} from './ui';
 
 type Row={f:[number,number];y:number};
 const SPECIES=['setosa','versicolor','virginica'],COLORS=[PALETTE[0],PALETTE[2],PALETTE[1]];
@@ -60,7 +60,6 @@ function GroupBars({c,title}:{c:number[];title:string}){const n=c.reduce((a,b)=>
   return <div className="group-bars"><strong>{title} · {n} bông</strong><div className="stack">{c.map((v,i)=>v?<i key={i} style={{flex:v,background:COLORS[i]}} title={`${SPECIES[i]}: ${v}`}>{v}</i>:null)}</div><small>Gini {fmt(gini(c))}</small></div>}
 
 export function IrisProject({navigate}:{navigate:(r:Route,anchor?:string)=>void}){
-  const [step,setStep]=useState(0);
   const [f1,setF1]=useState(0),[t1,setT1]=useState(3.2);
   const [f2,setF2]=useState(1),[t2,setT2]=useState(1.5);
   const [depth,setDepth]=useState(2),[noise,setNoise]=useState(false);
@@ -129,5 +128,12 @@ export function IrisProject({navigate}:{navigate:(r:Route,anchor?:string)=>void}
       visual:<>{plot(final,all,rows,(sx,sy)=><circle cx={sx(q[0])} cy={sy(q[1])} r={9} fill="#ffd173" stroke="#0a1220" strokeWidth={2}/>)}{legend}</>,
       takeaway:'Ưu điểm lớn nhất của cây: em giải thích được từng dự đoán bằng chuỗi câu hỏi. Vùng giáp ranh giữa versicolor và virginica là nơi cây dễ sai nhất, đúng như mắt em thấy.'},
   ];
-  return <ProjectFrame id="iris" steps={steps} step={step} setStep={setStep} navigate={navigate}/>;
+  const reverse:ReverseDef={layers:[
+    {from:4,label:'Dùng sản phẩm',title:'Một cây quyết định đã xây xong.',intro:<p>Đo một bông hoa mới bằng hai thanh trượt. Cây trả lời ngay loài hoa, kèm đường đi qua các câu hỏi được tô sáng.</p>,takeaway:'Sản phẩm là một chuỗi câu hỏi có/không. Khác logistic, em đọc được ngay lý do của từng dự đoán.'},
+    {from:2,label:'Nó được xây thế nào',title:'Mở lại quá trình dựng cây.',intro:<p>Cây không ai viết tay. Máy thử mọi ngưỡng và chọn câu hỏi làm Gini giảm nhiều nhất. Kéo độ sâu từ 1 lên để xem cây mọc dần.</p>,takeaway:'Mỗi câu hỏi trong sản phẩm là kết quả của một lần quét ngưỡng tham lam.'},
+    {from:3,label:'Tháo giới hạn',title:'Bỏ giới hạn độ sâu thì sao?',intro:<p>Sản phẩm bị giới hạn độ sâu 3. Tháo giới hạn đó, bật nhãn ghi sai, rồi xem train và test.</p>,takeaway:'Giới hạn độ sâu là bộ phận chống học thuộc. Tháo nó ra, cây học cả lỗi trong dữ liệu.'},
+    {from:0,label:'Tự lắp: câu 1',title:'Em tự đặt câu hỏi gốc.',intro:<p>Lắp lại cây từ trang trắng. Chọn số đo và ngưỡng cho câu hỏi đầu tiên, cố đạt Gini trung bình thấp nhất.</p>,takeaway:'Câu hỏi gốc tốt nhất tách gọn setosa: em vừa tìm lại đúng câu hỏi mà máy đã chọn.'},
+    {from:1,label:'Tự lắp: câu 2',title:'Hoàn thiện cây của em.',intro:<p>Thêm câu hỏi thứ hai cho nhóm còn lẫn. So độ chính xác của cây em với sản phẩm.</p>,takeaway:'Hai câu hỏi đã lắp lại gần đủ sản phẩm. Phần thiếu chỉ là vài câu hỏi nhỏ ở vùng giáp ranh.'},
+  ]};
+  return <ProjectFrame id="iris" steps={steps} reverse={reverse} navigate={navigate}/>;
 }

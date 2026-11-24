@@ -6,7 +6,9 @@ import {PHASE_COLORS} from '../components/Home';
 import {CHAPTERS,PROJECTS} from './chapters';
 import type {Chapter} from './chapters';
 import type {ProjectId} from './ids';
-import {loadProjects} from './ui';
+import {Segmented,loadMode,loadProjects,saveMode} from './ui';
+import type {LearnMode} from './ui';
+import {useState} from 'react';
 import type {ProjectStore} from './ui';
 import {TumorProject} from './TumorProject';
 import {SpamProject} from './SpamProject';
@@ -32,7 +34,7 @@ export function chapterStatus(ch:Chapter,progress:Progress,store:ProjectStore){
 function ProjectCard({id,navigate,store}:{id:ProjectId|'housing';navigate:Nav;store:ProjectStore}){
   const m=PROJECTS[id],s=id==='housing'?undefined:store[id];
   return <button className="proj-card" onClick={()=>openProject(id,navigate)} style={{['--phase' as string]:PHASE_COLORS[m.chapter-1]}}>
-    <span className="proj-card-top"><span className="eyebrow">Chương {m.chapter}</span>{s?.done?<span className="proj-status done"><CheckCircle size={14}/> Hoàn thành</span>:s?.visited.length?<span className="proj-status">Đã xem {s.visited.length}/5 bước</span>:null}</span>
+    <span className="proj-card-top"><span className="eyebrow">Chương {m.chapter}</span>{s?.done?<span className="proj-status done"><CheckCircle size={14}/> Hoàn thành</span>:s&&(s.visited.length||s.visitedR.length)?<span className="proj-status">Đã xem {Math.max(s.visited.length,s.visitedR.length)} phần</span>:null}</span>
     <strong>{m.question}</strong>
     <span className="proj-title">{m.title}</span>
     <span className="proj-summary">{m.summary}</span>
@@ -87,9 +89,13 @@ export function ChapterPage({id,progress,navigate}:{id:number;progress:Progress;
 
 export function ProjectsHub({navigate}:{navigate:Nav}){
   const store=loadProjects(),tracked=Object.keys(PROJECTS).filter(k=>k!=='housing'),done=tracked.filter(k=>store[k]?.done).length;
+  const [mode,setMode]=useState<LearnMode>(loadMode);
   return <>
     <header className="page-heading"><span className="eyebrow">Phòng lab dự án · {done}/{tracked.length} hoàn thành</span><h1>Chọn một câu hỏi để trả lời.</h1>
       <p>Mỗi dự án đi qua 5 bước: em đoán trước, tự làm bằng tay, cho máy học, thử thách mô hình, rồi rút ra kết luận. Chạy ngay trên trình duyệt, không cần cài đặt.</p></header>
+    <div className="mode-switch hub"><span className="eyebrow">Cách học mặc định</span>
+      <Segmented label="Cách học mặc định" options={[['forward','Học xuôi · tự xây từ đầu'],['reverse','Học ngược · tháo từ sản phẩm']]} value={mode} onChange={m=>{setMode(m);saveMode(m)}}/>
+      <p className="small-note">{mode==='reverse'?'Mỗi dự án mở ra là một mô hình đã chạy tốt; em tháo dần từng lớp rồi tự lắp lại. Riêng Dự án giá nhà vẫn học xuôi.':'Mỗi dự án bắt đầu từ trang trắng: đoán, tự làm, rồi cho máy học. Trong từng dự án em vẫn đổi được cách học.'}</p></div>
     {CHAPTERS.filter(c=>c.projects.length).map(ch=><section className="chapter-section" key={ch.id}>
       <div className="section-head"><div><span className="eyebrow" style={{color:PHASE_COLORS[ch.id-1]}}>Chương {ch.id}</span><h2>{ch.title}</h2></div><button className="btn-quiet" onClick={()=>navigate({kind:'phase',id:ch.id})}>Mục tiêu chương <ChevronRight size={14}/></button></div>
       <div className="proj-grid">{ch.projects.map(p=><ProjectCard key={p} id={p} navigate={navigate} store={store}/>)}</div></section>)}

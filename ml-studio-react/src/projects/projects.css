@@ -186,3 +186,22 @@ figcaption{font-size:12px;color:var(--text-2)}figcaption b{color:var(--text)}
 .outcomes.big{list-style:none}
 .project-controls input[type=range],.range-field input[type=range]{accent-color:var(--accent)}
 .rl-label{font-size:12px;font-weight:600}
+
+/* Học xuôi / học ngược */
+.mode-switch{display:flex;flex-direction:column;gap:8px;margin:-6px 0 18px;max-width:640px}
+.mode-switch .segmented{max-width:560px}
+.mode-switch.hub{margin:0 0 26px}
+.mode-switch.hub .eyebrow{margin:0}
+.layer-strip{list-style:none;margin:0 0 14px;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px}
+.layer-strip button{width:100%;text-align:left;display:flex;flex-direction:column;gap:2px;padding:9px 11px;border-radius:10px;border:1px solid var(--line);color:var(--text-2);
+  background:color-mix(in srgb,var(--accent) calc(var(--depth)*14%),var(--surface))}
+.layer-strip b{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
+.layer-strip span{font-size:12.5px;line-height:1.35}
+.layer-strip li.seen button{border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
+.layer-strip li.on button{border-color:var(--accent);color:var(--text);box-shadow:0 0 0 1px var(--accent)}
+.layer-strip li.on b{color:var(--accent)}
+.product-digit{display:flex;flex-direction:column;gap:16px;width:100%}
+.big-pred{display:flex;align-items:baseline;gap:14px;padding:16px 20px;border-radius:12px;background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line))}
+.big-pred span{color:var(--text-2);font-size:13px}
+.big-pred strong{font-size:56px;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
+.big-pred small{color:var(--text-3)}

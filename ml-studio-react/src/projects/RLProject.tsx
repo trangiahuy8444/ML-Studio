@@ -1,7 +1,7 @@
 import {useMemo,useState} from 'react';
 import type {Route} from '../types';
 import {Bars,LineChart,PALETTE,PlayerBar,ProjectFrame,Segmented,Slider,Stat,fmt,pct,rng,usePlayer} from './ui';
-import type {StepDef} from './ui';
+import type {StepDef,ReverseDef} from './ui';
 
 const TRUE_P=[.25,.45,.62,.38];
 const MACHINES=['A','B','C','D'];
@@ -49,7 +49,6 @@ function Grid({Q}:{Q:number[][]}){
 }
 
 export function RLProject({navigate}:{navigate:(r:Route,anchor?:string)=>void}){
-  const [step,setStep]=useState(0);
   const [plays,setPlays]=useState<{arm:number;reward:number}[]>([]);
   const [eps,setEps]=useState(.1);
   const run=useMemo(()=>egreedy(eps,300,42),[eps]);
@@ -102,5 +101,12 @@ export function RLProject({navigate}:{navigate:(r:Route,anchor?:string)=>void}){
       visual:<Grid Q={snaps5.at(-1)!.Q}/>,
       takeaway:'Robot làm đúng điều ta thưởng, không phải điều ta muốn. Thiết kế phần thưởng là phần khó nhất của học tăng cường, và cũng là vấn đề lớn khi huấn luyện các hệ AI thật.'},
   ];
-  return <ProjectFrame id="rl" steps={steps} step={step} setStep={setStep} navigate={navigate}/>;
+  const reverse:ReverseDef={layers:[
+    {from:3,label:'Dùng sản phẩm',title:'Một robot đã biết đường.',intro:<p>Robot đã chơi 3000 lượt và tự học được đường đi (đường vàng). Kéo thanh trượt về 0 để tua ngược, xem nó lúc chưa biết gì.</p>,takeaway:'Sản phẩm là một bảng giá trị cho từng ô và từng hướng. Câu hỏi để tháo: điều gì khiến nó chọn đúng con đường này?'},
+    {from:4,label:'Tháo luật thưởng',title:'Đổi phần thưởng, robot đổi đường.',intro:<p>Bộ phận quyết định “tính cách” của robot là mức phạt mỗi bước. Đổi nó và xem robot học lại.</p>,takeaway:'Con đường không nằm sẵn trong thuật toán: nó sinh ra từ phần thưởng con người đặt.'},
+    {from:1,label:'Động cơ bên trong',title:'Thu nhỏ thành bài toán 4 máy.',intro:<p>Bỏ lưới đi, giữ lại phần lõi: chọn hành động có điểm cao nhất, thỉnh thoảng thử ngẫu nhiên (ε-greedy).</p>,takeaway:'Robot dùng đúng cơ chế này ở mỗi ô: khai thác hướng tốt nhất, thỉnh thoảng khám phá.'},
+    {from:2,label:'Tinh chỉnh bộ phận',title:'ε bao nhiêu là vừa?',intro:<p>So các giá trị ε trên 200 ván.</p>,takeaway:'ε là núm vặn giữa học nhanh và học đúng. Robot ở lớp đầu giảm ε dần theo thời gian.'},
+    {from:0,label:'Tự làm tác tử',title:'Em là robot.',intro:<p>Em tự chơi 30 lượt bằng chiến lược của mình.</p>,takeaway:'Em vừa tự cân bằng khám phá và khai thác bằng trực giác. Robot làm đúng điều đó, chỉ là có hệ thống hơn.'},
+  ]};
+  return <ProjectFrame id="rl" steps={steps} reverse={reverse} navigate={navigate}/>;
 }

@@ -6,21 +6,26 @@ import {CHAPTERS,PROJECTS} from './chapters';
 import type {ProjectId} from './ids';
 
 /* ---------- Tiến độ dự án (lưu trên trình duyệt) ---------- */
-export interface ProjectState {visited:number[];done:boolean;note:string}
+export type LearnMode='forward'|'reverse';
+export interface ProjectState {visited:number[];visitedR:number[];done:boolean;note:string;mode?:LearnMode}
 export type ProjectStore=Record<string,ProjectState>;
-const KEY='mlStudio-projects-v1';
-export const blankProject=():ProjectState=>({visited:[],done:false,note:''});
+const KEY='mlStudio-projects-v1',MODE_KEY='mlStudio-learnMode';
+export const blankProject=():ProjectState=>({visited:[],visitedR:[],done:false,note:''});
+const steps10=(v:unknown)=>Array.isArray(v)?v.filter((n):n is number=>Number.isInteger(n)&&n>=0&&n<10):[];
 export function loadProjects():ProjectStore{
   try{
     const raw=JSON.parse(localStorage.getItem(KEY)??'{}') as Record<string,Partial<ProjectState>>;
     const out:ProjectStore={};
-    for(const [id,v] of Object.entries(raw??{}))if(v&&typeof v==='object')out[id]={visited:Array.isArray(v.visited)?v.visited.filter(n=>Number.isInteger(n)&&n>=0&&n<10):[],done:v.done===true,note:typeof v.note==='string'?v.note.slice(0,5000):''};
+    for(const [id,v] of Object.entries(raw??{}))if(v&&typeof v==='object')out[id]={visited:steps10(v.visited),visitedR:steps10(v.visitedR),done:v.done===true,note:typeof v.note==='string'?v.note.slice(0,5000):'',...(v.mode==='reverse'||v.mode==='forward'?{mode:v.mode}:{})};
     return out;
   }catch{return {}}
 }
 export function saveProject(id:string,state:ProjectState){
   try{const all=loadProjects();all[id]=state;localStorage.setItem(KEY,JSON.stringify(all))}catch{/* bộ nhớ trình duyệt không khả dụng */}
 }
+/** Cách học mặc định cho các dự án chưa mở lần nào. */
+export function loadMode():LearnMode{try{return localStorage.getItem(MODE_KEY)==='reverse'?'reverse':'forward'}catch{return 'forward'}}
+export function saveMode(mode:LearnMode){try{localStorage.setItem(MODE_KEY,mode)}catch{/* bỏ qua */}}
 
 /* ---------- Số ngẫu nhiên có hạt giống: mô phỏng chạy lại cho cùng kết quả ---------- */
 export function rng(seed:number){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}}
@@ -31,17 +36,29 @@ export const fmt=(v:number,d=2)=>v.toLocaleString('vi-VN',{maximumFractionDigits
 
 export const PALETTE=['#42d3e5','#f28db9','#ffd173','#84e0a8','#a8a7ff','#ff9b6a','#7fd1ff','#e3b6ff','#c3e88d','#ffb3a7'];
 
-/* ---------- Khung 5 bước dùng chung ---------- */
+/* ---------- Khung dự án: học xuôi và học ngược ---------- */
 export interface StepDef {label:string;title:string;intro:ReactNode;controls?:ReactNode;visual:ReactNode;takeaway:string;below?:ReactNode}
+/** Một lớp khi tháo ngược: dùng lại phần tương tác của bước xuôi `from`, chỉ đổi lời dẫn. */
+export interface Layer {from:number;label:string;title:string;intro:ReactNode;takeaway:string}
+export interface ReverseDef {product?:StepDef;layers:Layer[]}
 
-export function ProjectFrame({id,steps,step,setStep,navigate}:{id:ProjectId;steps:StepDef[];step:number;setStep:(n:number)=>void;navigate:(r:Route,anchor?:string)=>void}){
+const layerName=(i:number,n:number)=>i===0?'Sản phẩm':i===n-1?'Lắp lại':`Lớp ${i}`;
+
+export function ProjectFrame({id,steps,reverse,navigate}:{id:ProjectId;steps:StepDef[];reverse?:ReverseDef;navigate:(r:Route,anchor?:string)=>void}){
   const meta=PROJECTS[id],chapter=CHAPTERS[meta.chapter-1];
   const [state,setState]=useState<ProjectState>(()=>loadProjects()[id]??blankProject());
+  const [mode,setModeState]=useState<LearnMode>(()=>reverse?(loadProjects()[id]?.mode??loadMode()):'forward');
+  const [step,setStep]=useState(0);
   const [revealed,setRevealed]=useState(false);
-  useEffect(()=>{setRevealed(false);setState(old=>old.visited.includes(step)?old:{...old,visited:[...old.visited,step].sort()})},[step]);
+  const rev=mode==='reverse'&&!!reverse;
+  const list:StepDef[]=rev?[...(reverse!.product?[reverse!.product]:[]),...reverse!.layers.map(l=>({...steps[l.from],label:l.label,title:l.title,intro:l.intro,takeaway:l.takeaway}))]:steps;
+  const visited=rev?state.visitedR:state.visited;
+  const setMode=(m:LearnMode)=>{setModeState(m);setStep(0);saveMode(m);setState(old=>({...old,mode:m}))};
+  useEffect(()=>{setRevealed(false);setState(old=>{const key=rev?'visitedR':'visited';return old[key].includes(step)?old:{...old,[key]:[...old[key],step].sort()}})},[step,rev]);
   useEffect(()=>saveProject(id,state),[id,state]);
-  const current=steps[step];
-  const allVisited=steps.every((_,i)=>state.visited.includes(i));
+  const current=list[Math.min(step,list.length-1)];
+  const allVisited=list.every((_,i)=>visited.includes(i))||(state.visited.length>=steps.length)||(!!reverse&&state.visitedR.length>=(reverse.layers.length+(reverse.product?1:0)));
+  const unit=rev?'Lớp':'Bước';
   return <>
     <header className="page-heading">
       <button className="back-link" onClick={()=>navigate({kind:'phase',id:chapter.id})}><ArrowLeft size={14}/> Chương {chapter.id}: {chapter.title}</button>
@@ -51,19 +68,24 @@ export function ProjectFrame({id,steps,step,setStep,navigate}:{id:ProjectId;step
       <div className="chip-row">{meta.skills.map(s=><span className="chip" key={s}>{s}</span>)}</div>
       <div className="heading-actions">{meta.days.map(d=><button key={d} className="btn-outline" onClick={()=>navigate({kind:'day',id:d})}>Bài ngày {d}</button>)}</div>
     </header>
+    {reverse&&<div className="mode-switch">
+      <Segmented label="Cách học" options={[['forward','Học xuôi · tự xây từ đầu'],['reverse','Học ngược · tháo từ sản phẩm']]} value={mode} onChange={setMode}/>
+      <p className="small-note">{rev?'Bắt đầu từ một mô hình đã chạy tốt. Mỗi lớp mở ra một bộ phận bên trong: nó quyết định thế nào, học ra sao, bộ phận nào thay hoặc bỏ được. Cuối cùng em tự lắp lại.':'Bắt đầu từ trang trắng: em đoán, tự làm bằng tay, rồi cho máy học và thử thách mô hình.'}</p>
+    </div>}
+    {rev&&<ol className="layer-strip" aria-label="Các lớp tháo ngược">{list.map((s,i)=><li key={s.label} className={(i===step?'on ':'')+(visited.includes(i)?'seen':'')} style={{['--depth' as string]:i/(list.length-1)}}><button onClick={()=>setStep(i)}><b>{layerName(i,list.length)}</b><span>{s.label}</span></button></li>)}</ol>}
     <section className="panel project-panel">
-      <div className="project-tabs" role="tablist" aria-label="Các bước dự án">
-        {steps.map((s,i)=><button key={s.label} role="tab" aria-selected={i===step} onClick={()=>setStep(i)}><span>{state.visited.includes(i)&&i!==step?<CheckCircle size={13}/>:i+1}</span>{s.label}</button>)}
-      </div>
+      {!rev&&<div className="project-tabs" role="tablist" aria-label="Các bước dự án">
+        {list.map((s,i)=><button key={s.label} role="tab" aria-selected={i===step} onClick={()=>setStep(i)}><span>{visited.includes(i)&&i!==step?<CheckCircle size={13}/>:i+1}</span>{s.label}</button>)}
+      </div>}
       <div className="project-workspace">
         <div className="project-controls">
-          <span className="eyebrow">Bước {step+1} / {steps.length}</span>
+          <span className="eyebrow">{rev?`${layerName(step,list.length)} · tháo ngược ${step+1}/${list.length}`:`${unit} ${step+1} / ${list.length}`}</span>
           <h2>{current.title}</h2>
           <div className="step-intro">{current.intro}</div>
           {current.controls}
           <div className="takeaway">
             {revealed?<><strong><Lightbulb size={15}/> Điều rút ra</strong><p>{current.takeaway}</p></>:
-              <button className="btn-quiet" onClick={()=>setRevealed(true)}><Lightbulb size={15}/> Em thử xong rồi, xem điều rút ra</button>}
+              <button className="btn-quiet" onClick={()=>setRevealed(true)}><Lightbulb size={15}/> {rev?'Em tháo xong lớp này, xem điều rút ra':'Em thử xong rồi, xem điều rút ra'}</button>}
           </div>
         </div>
         <div className="project-chart">{current.visual}</div>
@@ -71,14 +93,14 @@ export function ProjectFrame({id,steps,step,setStep,navigate}:{id:ProjectId;step
       {current.below&&<div className="project-evidence">{current.below}</div>}
     </section>
     <div className="previous-next">
-      {step>0?<button className="btn-outline" onClick={()=>setStep(step-1)}><ArrowLeft size={15}/> {steps[step-1].label}</button>:<span/>}
-      {step<steps.length-1&&<button className="btn-primary" onClick={()=>setStep(step+1)}>Bước tiếp: {steps[step+1].label} <ArrowRight size={15}/></button>}
+      {step>0?<button className="btn-outline" onClick={()=>setStep(step-1)}><ArrowLeft size={15}/> {list[step-1].label}</button>:<span/>}
+      {step<list.length-1&&<button className="btn-primary" onClick={()=>setStep(step+1)}>{rev?'Tháo tiếp':'Bước tiếp'}: {list[step+1].label} <ArrowRight size={15}/></button>}
     </div>
     <section className="panel project-wrap">
-      <div><h3>Kết luận của em</h3><p className="small-note">Viết 3–5 dòng: em đã thử gì, quan sát gì, mô hình còn yếu ở đâu.</p>
-        <textarea rows={4} value={state.note} aria-label="Kết luận dự án" onChange={e=>setState({...state,note:e.target.value})} placeholder="Ví dụ: Khi hạ ngưỡng xuống 0,3 thì bỏ sót ít ca ác tính hơn nhưng báo động nhầm nhiều hơn…"/></div>
+      <div><h3>Kết luận của em</h3><p className="small-note">{rev?'Viết 3–5 dòng: sản phẩm gồm những bộ phận nào, bộ phận nào quan trọng nhất, em lắp lại được đến đâu.':'Viết 3–5 dòng: em đã thử gì, quan sát gì, mô hình còn yếu ở đâu.'}</p>
+        <textarea rows={4} value={state.note} aria-label="Kết luận dự án" onChange={e=>setState({...state,note:e.target.value})} placeholder={rev?'Ví dụ: Sản phẩm chỉ là một đường thẳng (w, b) cộng một ngưỡng do người chọn; tháo bớt một đặc trưng thì bỏ sót nhiều hơn…':'Ví dụ: Khi hạ ngưỡng xuống 0,3 thì bỏ sót ít ca ác tính hơn nhưng báo động nhầm nhiều hơn…'}/></div>
       <div className="project-wrap-side">
-        <p className="small-note">Đã xem {state.visited.length}/{steps.length} bước{allVisited?'':' · xem đủ các bước để hoàn thành'}.</p>
+        <p className="small-note">Đã xem {visited.length}/{list.length} {rev?'lớp':'bước'}{allVisited?'':` · xem đủ các ${rev?'lớp':'bước'} để hoàn thành`}.</p>
         <label className="check-line"><input type="checkbox" disabled={!allVisited&&!state.done} checked={state.done} onChange={e=>setState({...state,done:e.target.checked})}/>Em đã làm xong dự án này và viết kết luận</label>
         {state.done&&<span className="complete-label"><CheckCircle size={16}/> Dự án hoàn thành</span>}
         <p className="small-note">Dữ liệu: {meta.data}</p>

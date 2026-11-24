@@ -1,7 +1,7 @@
 import {useMemo,useState} from 'react';
 import type {Route} from '../types';
 import {Bars,Confusion,ProjectFrame,Slider,Stat,fmt,pct} from './ui';
-import type {StepDef} from './ui';
+import type {StepDef,ReverseDef} from './ui';
 
 type Mail={text:string;spam:boolean};
 // Email tự soạn để minh họa; không lấy từ hộp thư thật.
@@ -67,7 +67,7 @@ function Chips({model,text}:{model:Model;text:string}){
 }
 
 export function SpamProject({navigate}:{navigate:(r:Route,anchor?:string)=>void}){
-  const [step,setStep]=useState(0);
+  const [probe,setProbe]=useState('Chúc mừng, bạn được nhận quà miễn phí từ cửa hàng sách');
   const [guesses,setGuesses]=useState<(boolean|null)[]>(()=>TEST.slice(0,8).map(()=>null));
   const [pick,setPick]=useState(0),[alpha,setAlpha]=useState(1);
   const [draft,setDraft]=useState('Thầy ơi, em gửi bài tập. Nhân tiện có chương trình nhận quà miễn phí, bấm link nhé');
@@ -114,5 +114,17 @@ export function SpamProject({navigate}:{navigate:(r:Route,anchor?:string)=>void}
         <ul className="pred-list">{preds.map((x,i)=><li key={i} className={(x.p>=thr)===x.m.spam?'right':'wrong'}><span>{pct(x.p)}</span>{x.m.text}</li>)}</ul></>,
       takeaway:'Email "cửa hàng sách giảm giá" của bạn bè dễ bị chặn nhầm vì chứa từ quảng cáo. Với lọc thư, ta thường ưu tiên precision cao: thà lọt vài thư rác còn hơn mất thư quan trọng.'},
   ];
-  return <ProjectFrame id="spam" steps={steps} step={step} setStep={setStep} navigate={navigate}/>;
+  const reverse:ReverseDef={product:{label:'Dùng sản phẩm',title:'Một bộ lọc thư đã chạy.',
+    intro:<p>Bộ lọc đã học xong tự xếp 10 email mới vào <b>Hộp thư</b> hoặc <b>Thư rác</b>. Gõ thêm một email ở dưới để thử. Đừng vội nhìn vào bên trong.</p>,
+    controls:<><textarea rows={4} value={probe} onChange={e=>setProbe(e.target.value)} aria-label="Email thử"/><div className="stat-row"><Stat label="Xác suất rác" value={pct(prob(base,probe))} tone={prob(base,probe)>=.5?'bad':'good'}/><Stat label="Xếp vào" value={prob(base,probe)>=.5?'Thư rác':'Hộp thư'}/></div></>,
+    visual:<div className="two-col"><div><h4 className="col-title">Hộp thư</h4><ul className="pred-list">{TEST.filter(m=>prob(base,m.text)<.5).map((m,i)=><li key={i} className={m.spam?'wrong':'right'}><span>{pct(prob(base,m.text))}</span>{m.text}</li>)}</ul></div><div><h4 className="col-title" style={{color:'var(--pink)'}}>Thư rác</h4><ul className="pred-list">{TEST.filter(m=>prob(base,m.text)>=.5).map((m,i)=><li key={i} className={m.spam?'right':'wrong'}><span>{pct(prob(base,m.text))}</span>{m.text}</li>)}</ul></div></div>,
+    takeaway:'Bộ lọc xếp gần đúng hết, nhưng có ít nhất một email bị xếp nhầm (viền hồng). Câu hỏi để tháo: nó dựa vào đâu để quyết định?'},
+  layers:[
+    {from:2,label:'Mở hộp: điểm từng từ',title:'Bên trong là một bảng điểm từ.',intro:<p>Mở bộ lọc ra: mỗi từ có một điểm nghi ngờ, điểm email bằng tổng điểm các từ. Chọn một email để thấy từ nào kéo nó về phía rác.</p>,takeaway:'Toàn bộ bộ lọc là một bảng điểm cho vài trăm từ cộng một điểm gốc. Không có quy tắc nào được viết tay.'},
+    {from:1,label:'Điểm đến từ đâu',title:'Đi ngược về dữ liệu: đếm từ.',intro:<p>Bảng điểm được tính từ việc đếm: từ nào hay xuất hiện trong 15 email rác mẫu, từ nào trong 15 email thường.</p>,takeaway:'Điểm của một từ chỉ là tỉ lệ tần suất ở hai phía. Đổi dữ liệu mẫu là đổi bảng điểm, nên chất lượng bộ lọc nằm ở dữ liệu.'},
+    {from:4,label:'Quy tắc quyết định',title:'Ngưỡng chia hộp thư.',intro:<p>Bộ lọc đổi điểm thành xác suất rồi so với ngưỡng 0,5. Đổi ngưỡng và xem email nào chuyển hộp.</p>,takeaway:'Ngưỡng là chỗ con người quyết định: thà lọt thư rác còn hơn mất thư quan trọng.'},
+    {from:3,label:'Thử phá',title:'Tìm điểm yếu của sản phẩm.',intro:<p>Biết bên trong là phép cộng điểm từ, em có thể lừa nó. Viết một email lừa đảo mà xác suất rác dưới 50%.</p>,takeaway:'Hiểu cơ chế giúp tìm ra lỗ hổng: chèn từ “sạch” để pha loãng điểm. Kẻ gửi thư rác thật cũng làm vậy.'},
+    {from:0,label:'Tự lắp lại',title:'Em làm bộ lọc bằng đầu.',intro:<p>Giờ em là bộ lọc. Phân loại 8 email bằng quy tắc của riêng em rồi so với máy.</p>,takeaway:'Quy tắc trong đầu em và bảng điểm của máy giống nhau đến bất ngờ: cả hai đều dựa vào những từ đặc trưng.'},
+  ]};
+  return <ProjectFrame id="spam" steps={steps} reverse={reverse} navigate={navigate}/>;
 }

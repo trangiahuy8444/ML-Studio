@@ -1,7 +1,7 @@
 import {useMemo,useState} from 'react';
 import type {Route} from '../types';
 import {Bars,Plot,ProjectFrame,Segmented,Stat,fmt,pct} from './ui';
-import type {StepDef} from './ui';
+import type {StepDef,ReverseDef} from './ui';
 
 type Doc={text:string;pos:boolean};
 // Phản hồi tự soạn theo phong cách UIT-VSFC (phản hồi sinh viên); không trích từ bộ dữ liệu gốc.
@@ -59,7 +59,6 @@ function Chips({text,model,bigrams}:{text:string;model:ReturnType<typeof trainNB
 }
 
 export function SentimentProject({navigate}:{navigate:(r:Route,anchor?:string)=>void}){
-  const [step,setStep]=useState(0);
   const [guess,setGuess]=useState<(boolean|null)[]>(()=>Array(6).fill(null));
   const [bigrams,setBigrams]=useState(false);
   const [word,setWord]=useState('hay');
@@ -109,5 +108,12 @@ export function SentimentProject({navigate}:{navigate:(r:Route,anchor?:string)=>
         <h4 className="col-title">Embedding nhận ra</h4>{e5.found.length?<Bars rows={e5.found.map(f=>({label:(f.neg?'không ':'')+f.w,value:(f.neg?-1:1)*EMB[f.w][0],color:(f.neg?-1:1)*EMB[f.w][0]>0?'#84e0a8':'#f28db9'}))} format={v=>fmt(v,1)}/>:<p className="small-note">Không có từ nào trong bảng embedding nhỏ này.</p>}</>,
       takeaway:'Cả hai đều thua câu mỉa mai, vì cần hiểu ngữ cảnh và ý định. Đó là lý do các mô hình ngôn ngữ lớn dùng attention để đọc cả câu cùng lúc, chủ đề của ngày 25.'},
   ];
-  return <ProjectFrame id="sentiment" steps={steps} step={step} setStep={setStep} navigate={navigate}/>;
+  const reverse:ReverseDef={layers:[
+    {from:4,label:'Dùng sản phẩm',title:'Hai bộ đoán cảm xúc đã chạy.',intro:<p>Gõ một phản hồi và xem hai bộ đoán trả lời. Thử câu khen, câu chê, câu có chữ “không”, và câu mỉa mai.</p>,takeaway:'Cả hai đúng với câu thẳng thắn và lúng túng với câu mỉa mai. Tháo ra để biết vì sao.'},
+    {from:2,label:'Mở hộp',title:'Bên trong: điểm của từng từ.',intro:<p>Mở bộ đoán Naive Bayes: mỗi từ, hoặc cặp “không + từ”, có một điểm. Tắt bigram để thấy bộ phận đó đóng góp gì.</p>,takeaway:'Bộ phận bigram nhỏ nhưng sửa được nhiều lỗi “không hay”. Tháo nó ra, độ chính xác tụt rõ.'},
+    {from:1,label:'Lớp biểu diễn',title:'Tháo đến tận đáy: túi từ.',intro:<p>Ở đáy sản phẩm, câu được biến thành túi từ và mất thứ tự.</p>,takeaway:'Điểm yếu gốc rễ nằm ở đây: hai câu ngược nghĩa có cùng một túi từ.'},
+    {from:3,label:'Thay biểu diễn',title:'Đổi túi từ bằng embedding.',intro:<p>Thay lớp biểu diễn: mỗi từ thành một điểm, từ gần nghĩa nằm gần nhau.</p>,takeaway:'Đổi lớp biểu diễn giúp đoán đúng cả câu có từ chưa gặp.'},
+    {from:0,label:'So với con người',title:'Em là bộ đoán thứ ba.',intro:<p>Em tự đoán 6 phản hồi rồi so với máy.</p>,takeaway:'Em đọc được ngữ cảnh mà túi từ không thấy. Khoảng cách đó là thứ attention và các mô hình lớn cố lấp.'},
+  ]};
+  return <ProjectFrame id="sentiment" steps={steps} reverse={reverse} navigate={navigate}/>;
 }

@@ -3,7 +3,7 @@ import type {PointerEvent} from 'react';
 import type {Route} from '../types';
 import digits from '../track-py/data/digits.json';
 import {Bars,Confusion,LineChart,ProjectFrame,Slider,Stat,pct,shuffled} from './ui';
-import type {StepDef} from './ui';
+import type {StepDef,ReverseDef} from './ui';
 
 const pixels=digits.samples.pixels as number[][],labels=digits.samples.label as number[];
 const order=shuffled(pixels.map((_,i)=>i),17),trainIdx=order.slice(0,300),testIdx=order.slice(300);
@@ -40,7 +40,6 @@ const KERNELS:{name:string;k:number[]}[]=[
 function conv(img:number[],k:number[]){const out:number[]=[];for(let y=0;y<6;y++)for(let x=0;x<6;x++){let s=0;for(let a=0;a<3;a++)for(let c=0;c<3;c++)s+=img[(y+a)*8+x+c]*k[a*3+c];out.push(Math.max(0,s))}return out}
 
 export function DigitsProject({navigate}:{navigate:(r:Route,anchor?:string)=>void}){
-  const [step,setStep]=useState(0);
   const [img,setImg]=useState<number[]>(()=>[...pixels[testIdx[0]]]);
   const [k,setK]=useState(5);
   const snaps=useMemo(()=>trainSoftmax(),[]);
@@ -89,5 +88,18 @@ export function DigitsProject({navigate}:{navigate:(r:Route,anchor?:string)=>voi
       visual:<><Confusion labels={D} matrix={cm}/><div className="neighbor-grid">{mistakes.slice(0,10).map(m=><figure key={m.i}><PixelGrid values={pixels[m.i]} size={76}/><figcaption>thật <b>{labels[m.i]}</b> → đoán {m.p}</figcaption></figure>)}</div></>,
       takeaway:'Lỗi tập trung ở các cặp có nét giống nhau. Nhìn ảnh sai giúp em biết nên thêm dữ liệu gì hoặc dùng mô hình nào, đó là phân tích lỗi, kỹ năng quan trọng hơn cả việc tăng 1% accuracy.'},
   ];
-  return <ProjectFrame id="digits" steps={steps} step={step} setStep={setStep} navigate={navigate}/>;
+  const finalProbs=softmax(logits(final.W,final.b,norm(img))),finalPred=finalProbs.indexOf(Math.max(...finalProbs));
+  const reverse:ReverseDef={product:{label:'Dùng sản phẩm',title:'Một bộ đọc chữ số đã huấn luyện xong.',
+    intro:<p>Mô hình này đúng {pct(final.testAcc)} trên ảnh nó chưa từng thấy. Vẽ một chữ số và xem nó đoán. Thử vẽ xấu, vẽ lệch sang một bên, vẽ số khó.</p>,
+    controls:drawPad,
+    visual:<div className="product-digit"><div className="big-pred"><span>Sản phẩm đọc là</span><strong>{finalPred}</strong><small>chắc {pct(finalProbs[finalPred])}</small></div><Bars rows={D.map((d,i)=>({label:'Số '+d,value:finalProbs[i],color:i===finalPred?'var(--accent)':'var(--surface-3)'}))} max={1} format={v=>pct(v)}/></div>,
+    takeaway:'Sản phẩm đoán đúng phần lớn nhưng dễ sai khi chữ số bị lệch khỏi giữa khung. Manh mối: có lẽ nó so theo từng vị trí pixel.'},
+  layers:[
+    {from:2,label:'Mở hộp: 10 tấm khuôn',title:'Bên trong là 10 tấm trọng số.',intro:<p>Mỗi chữ số có một tấm khuôn 8×8. Điểm của chữ số bằng tổng (pixel × khuôn). Kéo epoch về 0 để thấy khuôn trống, rồi kéo lên để thấy khuôn hình thành.</p>,takeaway:'Mô hình chấm điểm theo vị trí, nên vẽ lệch là khớp nhầm khuôn: đúng như manh mối ở lớp trước.'},
+    {from:0,label:'Đầu vào thật sự',title:'Máy nhận được gì từ nét vẽ?',intro:<p>Tháo thêm một lớp: trước khi vào mô hình, nét vẽ đã thành 64 con số.</p>,takeaway:'Mọi thứ bắt đầu từ bảng số này. Mô hình không biết “nét” hay “vòng”, chỉ biết số ở từng ô.'},
+    {from:1,label:'Thay động cơ',title:'Không học gì cũng đọc được?',intro:<p>Thay mạng bằng KNN: không có khuôn nào, chỉ tìm các ảnh giống nhất trong dữ liệu.</p>,takeaway:'KNN cũng đọc được nhưng phải mang theo toàn bộ dữ liệu. Mạng nén dữ liệu thành 10 tấm khuôn.'},
+    {from:4,label:'Tìm điểm yếu',title:'Sản phẩm sai ở đâu?',intro:<p>Xem 100 ảnh kiểm tra: bảng nhầm lẫn và những ảnh bị đoán sai.</p>,takeaway:'Các lỗi cho biết bộ phận nào cần nâng cấp: phụ thuộc vị trí và các cặp số có nét giống nhau.'},
+    {from:3,label:'Lắp bản tốt hơn',title:'Nâng cấp bằng bộ lọc tích chập.',intro:<p>Biết điểm yếu là phụ thuộc vị trí, ta lắp thêm bộ lọc trượt khắp ảnh để tìm nét ở mọi chỗ.</p>,takeaway:'Đây là lý do CNN ra đời: sửa đúng điểm yếu em vừa tháo ra.'},
+  ]};
+  return <ProjectFrame id="digits" steps={steps} reverse={reverse} navigate={navigate}/>;
 }

@@ -2,7 +2,7 @@ import {useMemo,useState} from 'react';
 import type {Route} from '../types';
 import breast from '../track-py/data/breast2d.json';
 import {Confusion,LineChart,Plot,PlayerBar,ProjectFrame,Slider,Stat,fmt,pct,shuffled,usePlayer} from './ui';
-import type {Scale,StepDef} from './ui';
+import type {Scale,StepDef,ReverseDef} from './ui';
 
 type Row={x:number;y:number;label:0|1};
 const rows:Row[]=(breast.points as number[][]).map(p=>({x:p[0],y:p[1],label:(p[2]===1?1:0)}));
@@ -47,7 +47,7 @@ function Heat({prob,sx,sy}:{prob:(x:number,y:number)=>number;sx:Scale;sy:Scale})
 const legend=<p className="chart-caption"><span style={{color:BLUE}}>●</span> lành tính · <span style={{color:RED}}>●</span> ác tính · viền trắng = mô hình đoán sai</p>;
 
 export function TumorProject({navigate}:{navigate:(r:Route,anchor?:string)=>void}){
-  const [step,setStep]=useState(0);
+  const [pr,setPr]=useState({x:1.2,y:.8});
   const [t1,setT1]=useState(1.5);
   const [angle,setAngle]=useState(30),[offset,setOffset]=useState(.6);
   const fits=useMemo(()=>trainLogistic(),[]);
@@ -109,5 +109,20 @@ export function TumorProject({navigate}:{navigate:(r:Route,anchor?:string)=>void
         <p className="chart-caption">Ô tô đỏ: ca ác tính bị bỏ sót. Hạ ngưỡng để làm nó nhỏ lại và xem precision thay đổi ra sao.</p></>,
       takeaway:'Chọn ngưỡng là quyết định về con người, không phải về toán: em cần biết bỏ sót tốn kém hơn báo nhầm bao nhiêu. Khi dữ liệu lệch lớp, hãy nhìn recall và precision thay vì chỉ accuracy.'},
   ];
-  return <ProjectFrame id="tumor" steps={steps} step={step} setStep={setStep} navigate={navigate}/>;
+  const prodP=sig(final.w[0]*pr.x+final.w[1]*pr.y+final.b);
+  const reverse:ReverseDef={product:{label:'Dùng sản phẩm',title:'Một bộ chẩn đoán đã huấn luyện xong.',
+    intro:<p>Đây là mô hình hoàn chỉnh. Kéo hai số đo của một khối u mới và xem nó trả lời. Chưa cần biết bên trong có gì: chỉ quan sát khi nào nó <b>tự tin</b>, khi nào <b>phân vân</b>.</p>,
+    controls:<><Slider label="Bán kính" value={pr.x} min={-2} max={4} step={.05} onChange={v=>setPr({...pr,x:v})} format={v=>fmt(v)}/><Slider label="Độ sần bề mặt" value={pr.y} min={-2.4} max={4.2} step={.05} onChange={v=>setPr({...pr,y:v})} format={v=>fmt(v)}/>
+      <div className="stat-row"><Stat label="Xác suất ác tính" value={pct(prodP)} tone={prodP>=.5?'bad':'good'}/><Stat label="Kết luận" value={prodP>=.5?'Ác tính':'Lành tính'}/></div>
+      <p className="small-note">Sản phẩm đúng {pct(final.acc)} trên 400 ca huấn luyện và {pct(count(valid,r=>pv(r)>=.5?1:0).acc)} trên 169 ca kiểm tra.</p></>,
+    visual:<><Plot x={X} y={Y} xLabel="Bán kính trung bình" yLabel="Độ sần bề mặt" onPick={(x,y)=>setPr({x,y})}>{(sx,sy)=><><Heat prob={(x,y)=>sig(final.w[0]*x+final.w[1]*y+final.b)} sx={sx} sy={sy}/><circle cx={sx(pr.x)} cy={sy(pr.y)} r={9} fill="#ffd173" stroke="#0a1220" strokeWidth={2}/></>}</Plot><p className="chart-caption">Nền đậm là vùng sản phẩm tự tin, nhạt là vùng phân vân. Bấm lên biểu đồ để đặt ca mới.</p></>,
+    takeaway:'Sản phẩm nhận 2 con số và trả về một xác suất. Vùng phân vân là một dải hẹp chạy chéo: manh mối đầu tiên cho thấy bên trong có một đường thẳng.'},
+  layers:[
+    {from:2,label:'Mở hộp: w và b',title:'Bên trong chỉ là ba con số.',intro:<p>Mở mô hình ra: nó gồm w₁, w₂ và b, tạo thành một đường thẳng. Kéo về <b>epoch 0</b> để thấy lúc chưa học nó trống rỗng, rồi bấm Chạy để xem ba con số được tìm ra.</p>,takeaway:'Toàn bộ “trí khôn” của sản phẩm nằm trong ba con số tìm được bằng gradient descent. Dải phân vân ở lớp trước chính là vùng quanh đường thẳng này.'},
+    {from:4,label:'Quy tắc quyết định',title:'Từ xác suất đến câu trả lời có hay không.',intro:<p>Sản phẩm nói “ác tính” khi xác suất vượt 0,5. Con số 0,5 không do máy học mà do người chọn. Đổi nó trên 169 ca kiểm tra.</p>,takeaway:'Lớp ngoài cùng là một quyết định của con người: chấp nhận báo nhầm bao nhiêu để bớt bỏ sót. Accuracy một mình không nói được điều đó.'},
+    {from:3,label:'Thay động cơ',title:'Không có đường thẳng vẫn chạy được?',intro:<p>Tháo động cơ logistic, lắp KNN vào: không học tham số nào, chỉ hỏi các ca giống nhất. Bấm lên biểu đồ để đặt ca mới.</p>,takeaway:'Hai động cơ rất khác nhau cho kết quả gần nhau trên dữ liệu này. Hiểu sản phẩm là biết bộ phận nào thay được, bộ phận nào cốt lõi.'},
+    {from:0,label:'Tháo bớt đầu vào',title:'Bỏ đi một đặc trưng thì sao?',intro:<p>Tháo đặc trưng “độ sần”, chỉ còn bán kính. Mô hình lúc này chỉ còn là một ngưỡng. Kéo thử và so với sản phẩm đầy đủ.</p>,takeaway:'Bỏ một đặc trưng là mất vài phần trăm độ chính xác và bỏ sót nhiều hơn. Tháo từng bộ phận là cách nhanh nhất biết bộ phận nào đáng giá.'},
+    {from:1,label:'Tự lắp lại',title:'Giờ em lắp lại bằng tay.',intro:<p>Em đã biết bên trong là một đường thẳng. Tự xoay và dịch nó để đạt độ chính xác gần bằng sản phẩm (khoảng 90% trên tập huấn luyện).</p>,takeaway:'Lắp lại được gần bằng máy nghĩa là em đã hiểu sản phẩm: một đường thẳng tốt nhất, một ngưỡng do người chọn, trên dữ liệu hai đặc trưng.'},
+  ]};
+  return <ProjectFrame id="tumor" steps={steps} reverse={reverse} navigate={navigate}/>;
 }

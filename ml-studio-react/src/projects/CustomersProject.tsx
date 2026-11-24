@@ -1,7 +1,7 @@
 import {useMemo,useState} from 'react';
 import type {Route} from '../types';
 import {Bars,LineChart,PALETTE,Plot,PlayerBar,ProjectFrame,Segmented,Stat,fmt,gauss,rng,usePlayer} from './ui';
-import type {StepDef} from './ui';
+import type {StepDef,ReverseDef} from './ui';
 
 const FEATURES=['Lượt mua / tháng','Chi tiêu TB (nghìn đ)','Tuổi','Phút xem web / lượt'];
 // Bốn kiểu khách giả lập; thuật toán không được biết nhãn này.
@@ -46,7 +46,6 @@ const fromZ=(c:number[])=>[c[0]*sd[0]+mean[0],c[1]*sd[1]+mean[1]];
 const XR:[number,number]=[-1,14],YR:[number,number]=[-50,1200];
 
 export function CustomersProject({navigate}:{navigate:(r:Route,anchor?:string)=>void}){
-  const [step,setStep]=useState(0);
   const [k,setK]=useState(4);
   const [mine,setMine]=useState<number[][]>([]);
   const Z2=useMemo(()=>Z.map(z=>[z[0],z[1]]),[]);
@@ -101,5 +100,12 @@ export function CustomersProject({navigate}:{navigate:(r:Route,anchor?:string)=>
         <p className="chart-caption">Gợi ý: nhóm chi tiêu cao nhưng ít xem web có thể là "gia đình mua cuối tuần"; nhóm trẻ xem web lâu, chi ít có thể là "sinh viên săn khuyến mãi".</p></div>,
       takeaway:'Phân cụm là công cụ khám phá: giá trị thật nằm ở bước con người diễn giải và kiểm chứng nhóm, ví dụ thử gửi ưu đãi khác nhau cho từng nhóm và đo kết quả.'},
   ];
-  return <ProjectFrame id="customers" steps={steps} step={step} setStep={setStep} navigate={navigate}/>;
+  const reverse:ReverseDef={layers:[
+    {from:4,label:'Dùng sản phẩm',title:'Bảng phân nhóm khách đã có sẵn.',intro:<p>Đây là kết quả cuối: 90 khách được chia nhóm, kèm chân dung trung bình. Đặt tên cho từng nhóm như một người quản lý cửa hàng.</p>,takeaway:'Sản phẩm của phân cụm là các nhóm và chân dung của chúng. Câu hỏi để tháo: các nhóm từ đâu ra, và vì sao lại là 4?'},
+    {from:3,label:'Nhìn vào bên trong',title:'Các nhóm nằm ở đâu trong 4 chiều?',intro:<p>Mỗi khách có 4 con số. PCA ép xuống mặt phẳng để em thấy các nhóm tách nhau thế nào.</p>,takeaway:'Nhóm tách rõ trên PCA nghĩa là sản phẩm không chia bừa: dữ liệu thật sự có cấu trúc.'},
+    {from:1,label:'Nó học ra sao',title:'Tua lại K-means từ đầu.',intro:<p>Chạy lại thuật toán từng bước: gán khách vào tâm gần nhất, dời tâm về giữa nhóm, lặp đến khi đứng yên.</p>,takeaway:'Cả sản phẩm sinh ra từ hai thao tác đơn giản lặp lại. Tâm ban đầu khác có thể cho kết quả khác.'},
+    {from:2,label:'Vì sao là 4 nhóm',title:'Tháo con số k.',intro:<p>Số nhóm không do thuật toán tìm mà do người chọn. Xem inertia theo k để hiểu vì sao sản phẩm dùng k = 4.</p>,takeaway:'Khuỷu tay ở k = 4 là bằng chứng cho lựa chọn đó. Đổi k là đổi hẳn sản phẩm.'},
+    {from:0,label:'Tự lắp lại',title:'Em tự chia nhóm.',intro:<p>Bấm lên biểu đồ để đặt tâm bằng tay, cố đạt inertia gần bằng thuật toán.</p>,takeaway:'Tâm của em gần tâm K-means nghĩa là em đã hiểu: mỗi nhóm chỉ là một điểm giữa và những khách gần nó nhất.'},
+  ]};
+  return <ProjectFrame id="customers" steps={steps} reverse={reverse} navigate={navigate}/>;
 }
