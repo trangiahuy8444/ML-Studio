@@ -19,13 +19,110 @@ import { download } from '../lib/domain';
 import { PythonKernel } from '../lib/kernel';
 import type { Output, Route } from '../types';
 import { GradSimulation } from './GradSimulations';
+import { UnitSymbolGlossary } from './MathGlossary';
 import { GRAD_MODULES, allReadyUnits, getModule, getUnit } from './index';
-import type { GradExercise, GradUnit } from './types';
+import type { GradExercise, GradSection, GradUnit } from './types';
 import './curriculum.css';
 
 const GRAD_PROGRESS_KEY = 'mlStudioGrad-progress-v1';
 const GRAD_CODE_KEY = 'mlStudioGrad-code-v1';
+const GRAD_MODE_KEY = 'mlStudioGrad-mode-v1';
 const GRAD_MARKER = '__GRAD__';
+
+export type LearnerDepthMode = 'guided' | 'graduate';
+
+export function loadLearnerMode(): LearnerDepthMode {
+  try {
+    const raw = localStorage.getItem(GRAD_MODE_KEY);
+    if (raw === 'graduate' || raw === 'guided') return raw;
+  } catch {
+    /* Ignore unavailable storage */
+  }
+  return 'guided';
+}
+
+function saveLearnerMode(mode: LearnerDepthMode) {
+  try {
+    localStorage.setItem(GRAD_MODE_KEY, mode);
+  } catch {
+    /* Ignore unavailable storage */
+  }
+}
+
+function LearnerModeBanner({
+  mode,
+  onChange,
+}: {
+  mode: LearnerDepthMode;
+  onChange: (next: LearnerDepthMode) => void;
+}) {
+  return (
+    <div className="learner-mode-bar" role="region" aria-label="Chế độ học cá nhân hóa">
+      <div className="learner-mode-info">
+        <span className="eyebrow">Lộ trình cá nhân hóa · Từ Python &amp; Trực giác → Cao học CS</span>
+        <p>
+          {mode === 'guided'
+            ? 'Đang bật Chế độ 4 Tầng: Ví dụ đời thường → Tính tay số nhỏ → Code vòng lặp sang NumPy → Mở công thức Cao học khi sẵn sàng.'
+            : 'Đang bật Chế độ Chuẩn Cao học: Hiển thị đầy đủ công thức toán học và dẫn xuất ngay lập tức cùng bảng giải mã ký hiệu.'}
+        </p>
+      </div>
+      <div className="learner-mode-toggle" role="group" aria-label="Chọn độ sâu bài học">
+        <button
+          type="button"
+          className={`mode-btn ${mode === 'guided' ? 'active' : ''}`}
+          onClick={() => onChange('guided')}
+        >
+          4 Tầng: Dễ hiểu → Cao học
+        </button>
+        <button
+          type="button"
+          className={`mode-btn ${mode === 'graduate' ? 'active' : ''}`}
+          onClick={() => onChange('graduate')}
+        >
+          Chuẩn Cao học (Hiện đủ)
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SectionFormalLayer({ sec }: { sec: GradSection }) {
+  return (
+    <>
+      <MathText text={sec.body} />
+      {sec.math && <MathBlock math={sec.math} />}
+      {sec.symbols && sec.symbols.length > 0 && (
+        <div className="inline-symbol-box">
+          <span className="callout-title">Đọc từng ký hiệu trong công thức trên</span>
+          <div className="inline-symbol-list">
+            {sec.symbols.map((sym) => (
+              <div className="inline-symbol-row" key={sym.symbol}>
+                <span className="inline-symbol-math">
+                  <MathText text={sym.symbol} />
+                </span>
+                <span>
+                  <MathText text={`**${sym.readAs}**: ${sym.meaning}`} />
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {sec.intuition && (
+        <div className="callout-intuition">
+          <span className="callout-title">Trực giác &amp; Ý nghĩa thuật toán</span>
+          <MathText text={sec.intuition} />
+        </div>
+      )}
+      {sec.pitfall && (
+        <div className="callout-pitfall">
+          <span className="callout-title">Lưu ý kỹ thuật &amp; Điểm dễ nhầm</span>
+          <MathText text={sec.pitfall} />
+        </div>
+      )}
+    </>
+  );
+}
 
 export interface UnitProgress {
   theoryDone: boolean;
@@ -212,8 +309,14 @@ type Nav = (r: Route, anchor?: string) => void;
 
 export function CurriculumOverviewPage({ navigate }: { navigate: Nav }) {
   const [store] = useState(loadGradProgress);
+  const [mode, setMode] = useState<LearnerDepthMode>(loadLearnerMode);
   const readyUnits = allReadyUnits();
   const readyCompleted = readyUnits.filter((u) => isUnitComplete(u, store.units[u.id])).length;
+
+  function changeMode(next: LearnerDepthMode) {
+    setMode(next);
+    saveLearnerMode(next);
+  }
 
   return (
     <>
@@ -234,6 +337,8 @@ export function CurriculumOverviewPage({ navigate }: { navigate: Nav }) {
           </span>
         </div>
       </header>
+
+      <LearnerModeBanner mode={mode} onChange={changeMode} />
 
       <div className="curriculum-grid">
         {GRAD_MODULES.map((mod) => {
@@ -400,9 +505,15 @@ export function UnitPage({
 }) {
   const found = getUnit(unitId);
   const [store, setStore] = useState(loadGradProgress);
+  const [mode, setMode] = useState<LearnerDepthMode>(loadLearnerMode);
   const [codes, setCodes] = useState<Record<string, string>>(() =>
     found ? loadUnitCodes(found.unit) : {},
   );
+
+  function changeMode(next: LearnerDepthMode) {
+    setMode(next);
+    saveLearnerMode(next);
+  }
   const [kernelStatus, setKernelStatus] = useState('Sẵn sàng (Pyodide chạy trong trình duyệt)');
   const [runs, setRuns] = useState<Record<string, ExerciseRunState>>({});
 
@@ -530,6 +641,12 @@ export function UnitPage({
           Học phần {mod.id} · Bài {mod.id}.{unit.order}
         </span>
         <h1>{unit.title}</h1>
+        {unit.bigPicture && (
+          <div className="big-picture-card">
+            <span className="callout-title">Học bài này để giải quyết chuyện gì ngoài đời?</span>
+            <MathText text={unit.bigPicture} />
+          </div>
+        )}
         <MathText text={unit.summary} />
         <div className="heading-actions">
           <button
@@ -556,6 +673,8 @@ export function UnitPage({
         </div>
       </header>
 
+      <LearnerModeBanner mode={mode} onChange={changeMode} />
+
       <div className="unit-layout">
         <div className="unit-main">
           {/* Chuẩn đầu ra */}
@@ -572,29 +691,78 @@ export function UnitPage({
             </ul>
           </section>
 
-          {/* Phần 1: Lý thuyết */}
+          {/* Phần 1: Lý thuyết 4 Tầng + Từ điển ký hiệu */}
           <section className="panel" id="unit-theory">
-            <span className="eyebrow">Phần 1 · Lý thuyết &amp; Dẫn xuất Toán học</span>
+            <span className="eyebrow">Phần 1 · Lý thuyết 4 Tầng (Trực giác → Tính tay → Code → Toán Cao học)</span>
             <h2>Cơ sở hình thức &amp; Trực giác</h2>
-            {unit.sections.map((sec) => (
-              <article className="unit-section-card" key={sec.heading}>
-                <h3>{sec.heading}</h3>
-                <MathText text={sec.body} />
-                {sec.math && <MathBlock math={sec.math} />}
-                {sec.intuition && (
-                  <div className="callout-intuition">
-                    <span className="callout-title">Trực giác &amp; Ý nghĩa thuật toán</span>
-                    <MathText text={sec.intuition} />
-                  </div>
-                )}
-                {sec.pitfall && (
-                  <div className="callout-pitfall">
-                    <span className="callout-title">Lưu ý kỹ thuật &amp; Điểm dễ nhầm</span>
-                    <MathText text={sec.pitfall} />
-                  </div>
-                )}
-              </article>
-            ))}
+            <UnitSymbolGlossary unit={unit} defaultOpen={mode === 'guided'} />
+            {unit.sections.map((sec) => {
+              const hasLayers = Boolean(sec.realWorld || sec.workedExample || sec.codeBridge);
+              return (
+                <article className="unit-section-card" key={sec.heading}>
+                  <h3>{sec.heading}</h3>
+
+                  {sec.realWorld && (
+                    <div className="layer-card layer-1">
+                      <span className="layer-badge layer-badge-1">Tầng 1 · Ví dụ đời thường</span>
+                      <MathText text={sec.realWorld} />
+                    </div>
+                  )}
+
+                  {sec.workedExample && (
+                    <div className="layer-card layer-2">
+                      <span className="layer-badge layer-badge-2">Tầng 2 · Tính tay từng bước bằng số nhỏ</span>
+                      <MathText text={sec.workedExample} />
+                    </div>
+                  )}
+
+                  {sec.codeBridge && (
+                    <div className="layer-card layer-3">
+                      <span className="layer-badge layer-badge-3">
+                        Tầng 3 · {sec.codeBridge.title || 'Từ vòng lặp Python quen thuộc → NumPy'}
+                      </span>
+                      <div className="code-bridge-grid">
+                        <div className="code-bridge-col">
+                          <span className="code-bridge-label">1. Vòng lặp Python cơ bản</span>
+                          <pre>
+                            <code>{sec.codeBridge.pythonLoop}</code>
+                          </pre>
+                        </div>
+                        <div className="code-bridge-col numpy">
+                          <span className="code-bridge-label">2. Viết gọn bằng NumPy</span>
+                          <pre>
+                            <code>{sec.codeBridge.numpyWay}</code>
+                          </pre>
+                        </div>
+                      </div>
+                      <MathText text={sec.codeBridge.explanation} />
+                    </div>
+                  )}
+
+                  {hasLayers && mode === 'guided' ? (
+                    <details className="layer4-details" key={`${sec.heading}-${mode}`}>
+                      <summary>
+                        <span>
+                          Tầng 4 · Mở Công thức Toán chuẩn Cao học &amp; Giải thích ký hiệu (khi đã hiểu 3 tầng trên)
+                        </span>
+                      </summary>
+                      <div className="layer4-body">
+                        <SectionFormalLayer sec={sec} />
+                      </div>
+                    </details>
+                  ) : (
+                    <div className={hasLayers ? 'layer4-open' : ''}>
+                      {hasLayers && (
+                        <span className="layer-badge layer-badge-4" style={{ marginTop: 12 }}>
+                          Tầng 4 · Công thức Toán chuẩn Cao học
+                        </span>
+                      )}
+                      <SectionFormalLayer sec={sec} />
+                    </div>
+                  )}
+                </article>
+              );
+            })}
           </section>
 
           {/* Phần 2: Mô phỏng tương tác */}

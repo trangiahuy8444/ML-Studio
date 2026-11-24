@@ -1,20 +1,5 @@
-import type { GradModule } from './types';
-
-const COMMON_SETUP = String.raw`import ast, inspect, json, math
-import numpy as np
-
-def _check(name, fn):
-    try:
-        ok, detail = fn()
-    except NotImplementedError:
-        ok, detail = False, 'Chưa cài đặt (NotImplementedError)'
-    except Exception as error:
-        ok, detail = False, f'{type(error).__name__}: {error}'
-    return {'name': name, 'ok': bool(ok), 'detail': str(detail)}
-
-def _report(ex_id, *checks):
-    print('__GRAD__' + json.dumps({'id': ex_id, 'checks': list(checks)}, ensure_ascii=False))
-`;
+import { COMMON_SETUP } from './commonSetup.ts';
+import type { GradModule } from './types.ts';
 
 export const MODULE_01: GradModule = {
   id: 1,
@@ -43,6 +28,8 @@ export const MODULE_01: GradModule = {
       moduleId: 1,
       order: 1,
       title: 'Không gian đặc trưng, Đại số tuyến tính & Matrix Calculus',
+      bigPicture:
+        'Hãy tưởng tượng bạn viết phần mềm **dự đoán giá nhà**. Mỗi căn nhà trong Python là một list `[diện_tích, số_phòng, tuổi_nhà]`; xếp 1.000 căn lại ta có một bảng Excel — toán học gọi bảng đó là **Ma trận ($X$)**. Bài học này giúp bạn dịch các phép xử lý quen thuộc trên vòng lặp Python (`for`) sang phép tính bảng gọn nhẹ trong NumPy và hiểu trực giác cách máy tính tự "nhích" tham số để giảm sai số (Gradient).',
       summary:
         'Biểu diễn tập dữ liệu dạng ma trận thiết kế $X \\in \\mathbb{R}^{n \\times d}$, hình học của chuẩn và phép chiếu trực giao, kỹ thuật vector hóa NumPy và tính gradient dạng ma trận.',
       outcomes: [
@@ -69,7 +56,52 @@ export const MODULE_01: GradModule = {
       ],
       sections: [
         {
-          heading: '1. Ma trận thiết kế, Chuẩn vector & Hình học không gian đặc trưng',
+          heading: '1. Ma trận thiết kế, Chuẩn vector & Chuẩn hóa Z-score',
+          realWorld:
+            'Giả sử bạn có dữ liệu 2 cột để định giá nhà: **Cột 1 là Diện tích** (`50` đến `150` $m^2$) và **Cột 2 là Số phòng ngủ** (`1` đến `4`). Nếu tính trực tiếp khoảng cách giữa hai căn nhà, con số `150` của diện tích sẽ đè bẹp hoàn toàn sự chênh lệch `1–2` phòng ngủ chỉ vì đơn vị đo lớn hơn!\n\nDo đó cần làm 2 việc: **(1) Quy mọi cột về cùng thước đo** (chuẩn hóa Z-score) và **(2) Chọn thước đo độ dài** (toán học gọi là **Chuẩn — Norm**) để đo hai điểm cách nhau bao xa.',
+          workedExample:
+            String.raw`Cho cột Diện tích của 3 căn nhà: ` + '` + \'`' + String.raw`[50, 70, 90]` + '`\' + String.raw`' + String.raw`.
+
+- **Bước 1 — Tìm mức trung bình ($\mu$)**: $(50 + 70 + 90) / 3 = 70$.
+- **Bước 2 — Độ lệch so với trung bình**: ` + '`50 - 70 = -20`' + String.raw`, ` + '`70 - 70 = 0`' + String.raw`, ` + '`90 - 70 = +20`' + String.raw`.
+- **Bước 3 — Độ phân tán chuẩn ($\sigma$)**: tính căn trung bình bình phương độ lệch $= \sqrt{\frac{(-20)^2 + 0^2 + 20^2}{3}} = \sqrt{\frac{800}{3}} \approx 16.33$.
+- **Bước 4 — Chia lấy Z-score**: ` + '`[-20/16.33, 0, +20/16.33] = [-1.22, 0.0, +1.22]`' + String.raw`.
+Bây giờ mọi cột đều xoay quanh ` + '`0`' + String.raw` và có độ tản mát ` + '`1`' + String.raw`, không còn lệ thuộc đơn vị $m^2$ hay số phòng!
+
+Tương tự, với vector sai lệch ` + '`e = [3, -4]`' + String.raw`, ta có 3 cách đo độ dài:
+- **Đường chim bay ($L_2$)**: $\sqrt{3^2 + (-4)^2} = \sqrt{25} = 5$.
+- **Đi theo ô phố bàn cờ ($L_1$)**: $|3| + |-4| = 7$.
+- **Sai số tệ nhất ở một chiều ($L_\infty$)**: $\max(|3|, |-4|) = 4$.`,
+          codeBridge: {
+            title: 'Từ vòng lặp Python sang chuẩn hóa cột & khoảng cách bằng NumPy',
+            pythonLoop: `import math
+# Chuẩn hóa 1 list các số
+mu = sum(col) / len(col)
+var = sum((x - mu) ** 2 for x in col) / len(col)
+sd = math.sqrt(var) if var > 0 else 1.0
+z = [(x - mu) / sd for x in col]
+
+# Khoảng cách từng cặp giữa danh sách A và B
+dists = []
+for a in A:
+    row = []
+    for b in B:
+        d2 = sum((ai - bi) ** 2 for ai, bi in zip(a, b))
+        row.append(d2)
+    dists.append(row)`,
+            numpyWay: `import numpy as np
+# Chuẩn hóa cả bảng X (n dòng, d cột) một lần
+mu = X.mean(axis=0)        # Trung bình dọc theo từng cột
+sd = X.std(axis=0)
+sd = np.where(sd == 0, 1.0, sd)
+Z = (X - mu) / sd
+
+# Ghép mọi cặp (a_i, b_j) không cần vòng lặp
+diff = A[:, None, :] - B[None, :, :]
+dists = np.sum(diff ** 2, axis=2)`,
+            explanation:
+              'Trong NumPy, `axis=0` nghĩa là **"tính dọc xuống theo từng cột"**. Còn `A[:, None, :] - B[None, :, :]` tự động nhân bản các trục kích thước `1` (gọi là **Broadcasting**) để trừ mọi điểm trong `A` cho mọi điểm trong `B` cùng một lúc, thay thế gọn 2 vòng lặp lồng nhau.',
+          },
           body: String.raw`Trong học có giám sát, mỗi quan sát được biểu diễn dưới dạng vector cột $x_i \in \mathbb{R}^d$, ghép theo từng hàng thành ma trận thiết kế $X \in \mathbb{R}^{n \times d}$, cùng vector nhãn mục tiêu $y \in \mathbb{R}^n$.
 
 Để đo độ lớn sai số hoặc ràng buộc độ phức tạp của tham số $w \in \mathbb{R}^d$, ta sử dụng chuẩn $\ell_p$:
@@ -77,13 +109,48 @@ export const MODULE_01: GradModule = {
 - **Chuẩn $\ell_1$ (Manhattan)**: mặt cầu là khối bát diện có góc nhọn trên các trục tọa độ, thúc đẩy tính thưa (sparsity).
 - **Chuẩn $\ell_\infty$**: đo sai lệch lớn nhất theo một tọa độ đơn lẻ.`,
           math: String.raw`\|x\|_p = \left(\sum_{j=1}^d |x_j|^p\right)^{1/p}, \quad \|x\|_1 = \sum_{j=1}^d |x_j|, \quad \|x\|_2 = \sqrt{x^\top x}, \quad \|x\|_\infty = \max_{j} |x_j|`,
+          symbols: [
+            {
+              symbol: '$X \\in \\mathbb{R}^{n \\times d}$',
+              readAs: 'Ma trận thiết kế $n$ dòng, $d$ cột',
+              meaning: 'Bảng dữ liệu gồm $n$ mẫu (hàng), mỗi mẫu có $d$ đặc trưng (cột).',
+            },
+            {
+              symbol: '$\\|x\\|_p$',
+              readAs: 'Chuẩn bậc $p$ của vector $x$',
+              meaning: 'Thước đo độ dài tổng quát biến mảng nhiều số thành đúng 1 con số không âm.',
+            },
+          ],
           intuition:
             'Khoảng cách Euclidean bình phương giữa hai tập điểm $A \\in \\mathbb{R}^{n \\times d}$ và $B \\in \\mathbb{R}^{m \\times d}$ có thể khai triển qua tích vô hướng hoặc tính trực tiếp bằng broadcasting 3 chiều $(n, 1, d) - (1, m, d)$ mà không cần vòng lặp Python.',
           pitfall:
             'Chuẩn hóa Z-score với cột hằng (độ lệch chuẩn $\\sigma_j = 0$) sẽ tạo ra `NaN` hoặc `Inf` nếu không thay mẫu số bằng $1$ trước khi chia.',
         },
         {
-          heading: '2. Tích vô hướng & Phép chiếu trực giao',
+          heading: '2. Tích vô hướng (Nhân cặp rồi cộng) & Phép chiếu',
+          realWorld:
+            'Làm thế nào một mô hình tuyến tính đoán ra giá nhà? Rất đơn giản: nó giữ một danh sách **đơn giá trọng số** `w = [5, 10]` (ví dụ `5` chục triệu/$m^2$, `10` chục triệu/phòng) và cộng một giá nền cố định `b = 10`.\n\nVới mỗi căn nhà, máy tính chỉ làm động tác **nhân từng đặc trưng với đơn giá tương ứng rồi cộng dồn lại**, sau đó cộng thêm `b`. Phép tính "nhân cặp đôi rồi cộng dồn" đó chính là **Tích vô hướng (Dot Product)**!',
+          workedExample:
+            String.raw`Cho bảng 2 căn nhà ` + '`X = [[80, 2], [50, 1]]`' + String.raw`, trọng số ` + '`w = [5, 10]`' + String.raw` và ` + '`b = 10`' + String.raw`:
+
+- **Căn 1** ` + '`[80, 2]`' + String.raw`: $80 \times 5 + 2 \times 10 + 10 = 400 + 20 + 10 = 430$.
+- **Căn 2** ` + '`[50, 1]`' + String.raw`: $50 \times 5 + 1 \times 10 + 10 = 250 + 10 + 10 = 270$.
+
+Kết quả cho cả 2 căn là ` + '`[430, 270]`' + String.raw`. Về mặt hình học, nếu coi trọng số $w$ như một mũi tên định hướng trên bản đồ, tích vô hướng $w^\top x$ đo xem dữ liệu $x$ **đồng hướng với $w$ nhiều tới mức nào** (chiếu vuông góc $x$ lên trục $w$).`,
+          codeBridge: {
+            title: 'Tính dự đoán cho hàng nghìn dòng cùng lúc bằng toán tử @',
+            pythonLoop: `# Cách viết vòng lặp Python thông thường
+preds = []
+for row in X:
+    dot = 0.0
+    for xj, wj in zip(row, w):
+        dot += xj * wj
+    preds.append(dot + b)`,
+            numpyWay: `# Toán tử @ làm phép nhân ma trận–vector cho mọi dòng cùng lúc
+preds = X @ w + b`,
+            explanation:
+              'Ký hiệu `@` trong Python 3 / NumPy là viết tắt của phép nhân ma trận. Khi `X` có kích thước `(n, d)` và `w` có kích thước `(d,)`, `X @ w` tự động chạy tích vô hướng cho từng hàng và trả ra mảng `(n,)`, rồi `+ b` tự động cộng số `b` vào từng phần tử.',
+          },
           body: String.raw`Mô hình tuyến tính cơ bản thực chất tính tích vô hướng $x^\top w + b$:
 - Về đại số, đây là tổ hợp tuyến tính của các đặc trưng.
 - Về hình học, $(w^\top x) / \|w\|_2$ là độ dài hình chiếu có dấu của vector dữ liệu $x$ lên phương của vector pháp tuyến $w$. Siêu phẳng quyết định $\{x : w^\top x + b = 0\}$ luôn vuông góc với vector $w$.`,
@@ -92,7 +159,34 @@ export const MODULE_01: GradModule = {
             'Trong lập trình ma trận, quy ước một mẫu nằm trên một hàng của $X$ cho phép biểu thức `X @ w + b` tự động broadcast bias vô hướng $b$ ra toàn bộ $n$ mẫu cùng lúc.',
         },
         {
-          heading: '3. Giải tích Ma trận (Matrix Calculus) cho Tối ưu hóa',
+          heading: '3. Gradient: Làm sao máy tính biết đường giảm sai số?',
+          realWorld:
+            'Giả sử ban đầu máy tính đặt bừa trọng số `w = 1` nên đoán sai giá nhà khá nhiều. Làm sao nó tự biết phải **tăng `w` lên** (thành `2, 2.5`) hay **giảm `w` xuống** để bớt sai?\n\nHãy tưởng tượng bạn đang bịt mắt đứng trên một thung lũng sương mù, trong đó độ cao mặt đất chính là **mức độ đoán sai (Loss)**. Để đi xuống đáy thung lũng, bạn nhích chân thăm dò xem mặt đất **đang dốc lên hay dốc xuống** theo từng hướng. Cặp con số chỉ hướng dốc lên tại điểm đang đứng chính là **Gradient ($\\nabla_w$)** — chỉ cần bước ngược chiều với độ dốc (`w = w - lr * grad`) là sai số giảm xuống!',
+          workedExample:
+            String.raw`Thử với đúng 2 căn nhà nhỏ (1 đặc trưng): Căn 1 ` + '`(x1=1, giá thật y1=3)`' + String.raw`, Căn 2 ` + '`(x2=2, giá thật y2=5)`' + String.raw`.
+Thử đặt trọng số ban đầu ` + '`w = 1.0`' + String.raw`:
+
+- **Bước 1 (Đoán thử)**: $\hat{y}_1 = 1\cdot 1 = 1$, $\hat{y}_2 = 2\cdot 1 = 2$.
+- **Bước 2 (Đo sai lệch — Phần dư)**: $e_1 = 1 - 3 = -2$, $e_2 = 2 - 5 = -3$.
+- **Bước 3 (Bình phương trung bình MSE)**: $L(1) = \frac{(-2)^2 + (-3)^2}{2} = \frac{4 + 9}{2} = 6.5$.
+- **Bước 4 (Tính độ dốc Gradient $\frac{2}{n} \sum x_i e_i$)**:
+  $\text{grad} = \frac{2}{2}\big(1\cdot(-2) + 2\cdot(-3)\big) = 1\cdot(-2 - 6) = -8$.
+
+**Kiểm tra bằng trực giác**: Dấu âm ` + '`-8`' + String.raw` báo hiệu *"nếu tăng ` + '`w`' + String.raw` lên, sai số sẽ giảm rất nhanh!"*. Quả thật, thử tăng ` + '`w`' + String.raw` thành ` + '`1.1`' + String.raw`: sai số giảm từ ` + '`6.5`' + String.raw` xuống ` + '`5.74`' + String.raw`! (Muốn tự kiểm tra xem mình tính đạo hàm đúng chưa trong code, luôn dùng công thức nhích nhẹ $h = 0.0001$: ` + '`(L(w + h) - L(w - h)) / (2 * h)`' + String.raw` rồi so sánh).`,
+          codeBridge: {
+            title: 'Tính độ dốc MSE bằng vòng lặp vs công thức ma trận X.T @ err',
+            pythonLoop: `n = len(y)
+grad = [0.0 for _ in w]
+for i in range(n):
+    y_hat = sum(X[i][j] * w[j] for j in range(len(w)))
+    err_i = y_hat - y[i]
+    for j in range(len(w)):
+        grad[j] += (2.0 / n) * X[i][j] * err_i`,
+            numpyWay: `err = X @ w - y          # Sai số của cả n mẫu, shape (n,)
+grad = (2.0 / len(y)) * (X.T @ err)  # Shape (d,)`,
+            explanation:
+              'Tại sao phải đảo bảng `X` thành `X.T`? Bởi vì `err` đang chứa $n$ sai số của $n$ căn nhà. Ta muốn cộng gộp đóng góp sai số cho **từng trong $d$ đặc trưng**, nên phải xoay ma trận từ `(n, d)` sang `(d, n)` rồi nhân `@ err` có shape `(n,)` để ra đúng kết quả `(d,)` khớp với số phần tử của `w`!',
+          },
           body: String.raw`Thay vì lấy đạo hàm riêng từng phần tử $w_1, \dots, w_d$ rồi ghép lại, ta đạo hàm trực tiếp trên không gian vector $\mathbb{R}^d$ (theo quy ước mẫu số — cùng kích thước với tham số $w$).
 
 Ba đồng nhất thức cốt lõi dùng xuyên suốt các mô hình học máy:
@@ -100,8 +194,20 @@ Ba đồng nhất thức cốt lõi dùng xuyên suốt các mô hình học má
 - Gradient của dạng toàn phương tổng quát: $\nabla_w (w^\top A w) = (A + A^\top)w$ (rút gọn thành $2Aw$ nếu $A$ đối xứng).
 - Gradient của hàm mất mát bình phương trung bình (MSE) với $L(w) = \frac{1}{n}\|Xw - y\|_2^2$.`,
           math: String.raw`L(w) = \frac{1}{n}(Xw - y)^\top(Xw - y) \implies \nabla_w L(w) = \frac{2}{n} X^\top (Xw - y) \in \mathbb{R}^d`,
+          symbols: [
+            {
+              symbol: '$\\nabla_w L(w)$',
+              readAs: 'Gradient (độ dốc) của hàm sai số $L$ theo tham số $w$',
+              meaning: 'Mảng chứa đạo hàm riêng theo từng trọng số, cho biết chiều cần nhích để giảm sai số.',
+            },
+            {
+              symbol: '$X^\\top (Xw - y)$',
+              readAs: 'Chuyển vị $X$ nhân với phần dư',
+              meaning: 'Cách viết ma trận ngắn gọn của tổng `sum_i err_i * X[i, j]` cho mọi đặc trưng $j$ cùng lúc.',
+            },
+          ],
           intuition:
-            'Chú ý sự khớp chiều (dimensionality sanity check): $X$ có kích thước $(n, d)$, phần dư $(Xw - y)$ có kích thước $(n,)$, do đó $X^\top (Xw - y)$ có kích thước $(d, n) \\times (n,) = (d,)$ — trùng khớp chính xác với shape của $w$.',
+            'Chú ý sự khớp chiều (dimensionality sanity check): $X$ có kích thước $(n, d)$, phần dư $(Xw - y)$ có kích thước $(n,)$, do đó $X^\\top (Xw - y)$ có kích thước $(d, n) \\times (n,) = (d,)$ — trùng khớp chính xác với shape của $w$.',
           pitfall:
             'Lấy sai chiều chuyển vị $X(Xw - y)$ hoặc bỏ sót hệ số $\\frac{2}{n}$ sẽ làm sai bước cập nhật Gradient Descent theo kích thước tập mẫu $n$.',
         },
@@ -249,6 +355,8 @@ def _numeric_grad(X, y, w, eps=1e-6):
       moduleId: 1,
       order: 2,
       title: 'Xác suất, Ước lượng MLE, MAP & Suy luận Bayes',
+      bigPicture:
+        'Tại sao gần như mọi mô hình học máy đều chọn tối ưu sai số bình phương (MSE) hay thêm hình phạt trọng số (Regularization $L_2$)? Câu trả lời không phải ngẫu nhiên: đằng sau chúng là **quy tắc xác suất**. Bài này giải thích **MLE** (chọn đáp án làm dữ liệu đang thấy hợp lý nhất) và **MAP** (biết kết hợp thêm kinh nghiệm trước khi mở dữ liệu để không kết luận vội vàng khi mẫu ít).',
       summary:
         'Khung xác suất thống kê đằng sau các hàm mất mát của học máy: phân biệt Likelihood và Xác suất, ước lượng hợp lý cực đại (MLE), ước lượng hậu nghiệm cực đại (MAP) với tiên nghiệm liên hợp Beta–Binomial và Gaussian–Ridge.',
       outcomes: [
@@ -275,7 +383,32 @@ def _numeric_grad(X, y, w, eps=1e-6):
       ],
       sections: [
         {
-          heading: '1. Hàm hợp lý (Likelihood) & Ước lượng Hợp lý Cực đại (MLE)',
+          heading: '1. MLE: Tìm tham số làm dữ liệu hợp lý nhất',
+          realWorld:
+            'Bạn nhặt một đồng xu, tung thử **4 lần** và thấy ra **3 Ngửa, 1 Sấp**. Nếu bắt buộc phải đoán xem tỷ lệ ra Ngửa thật $\\theta$ của đồng xu đó là bao nhiêu (`0.2`, `0.5`, hay `0.75`?), chắc chắn bạn sẽ đặt cược cao nhất vào **`0.75`** (`3/4`), vì con số đó làm chuỗi kết quả `[Ngửa, Ngửa, Ngửa, Sấp]` có xác suất xuất hiện cao nhất! Đó chính xác là nguyên lý **MLE (Maximum Likelihood Estimation)**.\n\nCòn tại sao dân AI luôn lấy **`log(...)`** trước khi cộng? Bởi vì nếu có 1.000 mẫu dữ liệu, nhân 1.000 xác suất `0.75 * 0.75 * ... * 0.25` lại sẽ tạo ra con số `0.0000...00` quá nhỏ khiến máy tính làm tròn thành `0.0` (tràn số dưới)! Chuyển phép nhân thành phép **cộng các log** giúp máy tính tính an toàn tuyệt đối.',
+          workedExample:
+            String.raw`Với dữ liệu tung xu ` + '`3 Ngửa, 1 Sấp`' + String.raw`: xác suất sinh dữ liệu là $L(\theta) = \theta^3 (1 - \theta)^1$.
+Thử so sánh giá trị tại 3 ứng viên:
+- Nếu $\theta = 0.50$: $L = 0.5^3 \cdot 0.5 = 0.0625$ ($\log L \approx -2.77$).
+- Nếu $\theta = 0.75$: $L = 0.75^3 \cdot 0.25 = \mathbf{0.1055}$ ($\log L \approx \mathbf{-2.25}$ — **Cao nhất!**).
+- Nếu $\theta = 0.90$: $L = 0.9^3 \cdot 0.1 = 0.0729$ ($\log L \approx -2.62$).
+
+Với dữ liệu số liên tục như chiều cao ` + '`[2.0, 4.0, 6.0]`' + String.raw` giả sử theo phân phối chuẩn hình chuông: nghiệm MLE cho ngay trung bình $\hat{\mu} = (2+4+6)/3 = 4.0$ và phương sai $\hat{\sigma}^2 = \frac{(-2)^2 + 0^2 + 2^2}{3} = \frac{8}{3} \approx 2.667$.`,
+          codeBridge: {
+            title: 'Tính Log-Likelihood bằng vòng lặp Python vs NumPy',
+            pythonLoop: `import math
+n = len(x)
+mu = sum(x) / n
+var = sum((xi - mu) ** 2 for xi in x) / n
+ll = 0.0
+for xi in x:
+    ll += -0.5 * math.log(2 * math.pi * var) - ((xi - mu) ** 2) / (2 * var)`,
+            numpyWay: `mu = np.mean(x)
+var = np.var(x, ddof=0)   # Chia n thay vì n-1
+ll = np.sum(-0.5 * np.log(2 * np.pi * var) - ((x - mu) ** 2) / (2 * var))`,
+            explanation:
+              'Chú ý `ddof=0` trong `np.var(x, ddof=0)`: công thức MLE chia cho đúng số lượng mẫu `n`, khác với phương sai mẫu hiệu chỉnh `ddof=1` (chia `n - 1`) trong một số sách thống kê.',
+          },
           body: String.raw`Cho tập dữ liệu $\mathcal{D} = \{x_1, \dots, x_n\}$ được sinh độc lập và đồng phân phối (i.i.d.) từ phân phối tham số $p(x \mid \theta)$. Nguyên lý MLE chọn bộ tham số $\theta$ làm cho dữ liệu thực tế quan sát được có khả năng xảy ra cao nhất. Vì hàm $\log$ đơn điệu tăng, việc chuyển tích xác suất sang tổng Log-Likelihood giúp tránh tràn số dưới (underflow) và thuận tiện lấy đạo hàm:`,
           math: String.raw`\hat{\theta}_{\text{MLE}} = \arg\max_{\theta} \prod_{i=1}^n p(x_i \mid \theta) = \arg\max_{\theta} \sum_{i=1}^n \log p(x_i \mid \theta)`,
           intuition:
@@ -284,7 +417,33 @@ def _numeric_grad(X, y, w, eps=1e-6):
             'Hàm hợp lý $L(\\theta; \\mathcal{D})$ **không phải là phân phối xác suất theo $\\theta$** (tích phân theo $\\theta$ không bằng $1$). Ngoài ra, khi cỡ mẫu $n$ nhỏ (ví dụ tung đồng xu $3$ lần đều ra ngửa), $\\hat{\\theta}_{\\text{MLE}} = 1.0$ dễ bị cực đoan hóa (overconfident).',
         },
         {
-          heading: '2. Ước lượng Hậu nghiệm Cực đại (MAP) & Tiên nghiệm liên hợp Beta–Binomial',
+          heading: '2. MAP: Kết hợp Kinh nghiệm ban đầu để khỏi kết luận vội',
+          realWorld:
+            'Bạn lên sàn thương mại điện tử chọn mua tai nghe:\n- **Shop A** mới mở, mới có đúng **3 lượt mua** và cả 3 đều đánh giá 5 sao (`MLE = 3/3 = 100%` tuyệt đối!).\n- **Shop B** bán lâu năm, có **1.000 lượt mua** trong đó **950 đánh giá 5 sao** (`MLE = 95%`).\n\nBạn có tin Shop A xịn hơn Shop B 100% không? Không! Vì mẫu `n=3` quá nhỏ. Các hệ thống thông minh ngầm bỏ sẵn **vài phiếu đánh giá "trung bình" giả định** (gọi là **Tiên nghiệm Prior**) vào bình chọn trước khi cộng dữ liệu thật — đó chính là ước lượng **MAP (Maximum A Posteriori)**.',
+          workedExample:
+            String.raw`Dùng bộ đếm ` + '`Beta(alpha=4, beta=4)`' + String.raw` tương đương với việc giả định trước khi nhìn shop nào, nó giống một shop bình thường có ` + '`3`' + String.raw` phiếu tốt giả (` + '`alpha - 1 = 3`' + String.raw`) và ` + '`3`' + String.raw` phiếu xấu giả (` + '`beta - 1 = 3`' + String.raw`):
+
+- Với **Shop A** (` + '`k=3`' + String.raw` tốt trong ` + '`n=3`' + String.raw` lượt):
+  - **MLE (chỉ tin 3 mẫu)**: $3 / 3 = \mathbf{1.00}$ (100% — quá cực đoan!).
+  - **MAP (thêm kinh nghiệm trước)**: $\frac{3 + 4 - 1}{3 + 4 + 4 - 2} = \frac{6}{9} = \mathbf{0.667}$ (kéo về mức an toàn!).
+  - **Posterior Mean (kỳ vọng hậu nghiệm)**: $\frac{4 + 3}{4 + 4 + 3} = \frac{7}{11} \approx \mathbf{0.636}$.
+- Với **Shop B** (` + '`k=950`' + String.raw` tốt trong ` + '`n=1000`' + String.raw` lượt): $\text{MAP} = \frac{950 + 3}{1000 + 6} \approx \mathbf{0.947}$ (dữ liệu nhiều thì kinh nghiệm giả ban đầu hầu như không ảnh hưởng nữa!).`,
+          codeBridge: {
+            title: 'So sánh MLE, MAP và Posterior Mean trong Python',
+            pythonLoop: `mle = k / n
+# Cập nhật bộ đếm Beta hậu nghiệm (cộng thêm quan sát thật vào prior)
+a_post = alpha + k
+b_post = beta + (n - k)
+map_est = (a_post - 1) / (a_post + b_post - 2) if (a_post + b_post > 2) else mle
+post_mean = a_post / (a_post + b_post)`,
+            numpyWay: `# Khi dữ liệu là vector nhiều đồng xu / nhiều sản phẩm cùng lúc:
+mle = ks / ns
+a_post = alpha + ks
+b_post = beta + (ns - ks)
+post_mean = a_post / (a_post + b_post)`,
+            explanation:
+              'Các số `alpha` và `beta` đóng vai trò hết sức tự nhiên như **"số lần thành công và thất bại giả định trước khi thí nghiệm"**.',
+          },
           body: String.raw`Thay vì xem $\theta$ là hằng số chưa biết (như trường phái tần suất), suy luận Bayes gán cho $\theta$ một phân phối tiên nghiệm (Prior) $p(\theta)$ phản ánh tri thức trước khi thấy dữ liệu, rồi cập nhật thành phân phối hậu nghiệm (Posterior) theo Định lý Bayes: $p(\theta \mid \mathcal{D}) \propto p(\mathcal{D} \mid \theta)\, p(\theta)$.
 
 Với dữ liệu Bernoulli có $k$ lần thành công trong $n$ phép thử và tiên nghiệm liên hợp $\theta \sim \text{Beta}(\alpha, \beta)$, phân phối hậu nghiệm vẫn là $\text{Beta}(\alpha + k, \beta + n - k)$:`,
@@ -293,7 +452,14 @@ Với dữ liệu Bernoulli có $k$ lần thành công trong $n$ phép thử và
             'Các siêu tham số $\\alpha - 1$ và $\\beta - 1$ đóng vai trò như số "quan sát giả" (pseudo-counts) giúp làm mượt ước lượng khi dữ liệu thưa. Khi $n \\to \\infty$, đóng góp của prior mờ dần và $\\hat{\\theta}_{\\text{MAP}} \\to \\hat{\\theta}_{\\text{MLE}}$.',
         },
         {
-          heading: '3. Cầu nối Xác suất – Tối ưu: Từ MLE/MAP tới MSE và Ridge ($L_2$)',
+          heading: '3. Cầu nối kỳ diệu: Từ Xác suất sinh ra MSE & Ridge ($L_2$)',
+          realWorld:
+            'Trong code ML bạn sẽ liên tục thấy dòng phạt `loss = mse + lam * sum(w**2)` (gọi là **Ridge Regression**). Thực chất công thức phạt bình phương trọng số đó **xuất phát từ xác suất**: giả sử rằng các trọng số đúng ngoài đời thường nằm quanh `0` theo hình chuông Gaussian (tức hiếm khi có trọng số to khổng lồ vô lý) — khi lấy `log` của đường cong chuông $e^{-w^2}$, hàm mũ rơi xuống biến đúng thành hình phạt $\|w\|_2^2$!',
+          workedExample:
+            String.raw`Giả sử hai mô hình cùng có sai số dự đoán MSE giống nhau (` + '`0.5`' + String.raw`), nhưng:
+- Mô hình 1 dùng trọng số hiền hòa ` + '`w1 = [1.0, -1.0]`' + String.raw`: bình phương tổng trọng số $\|w_1\|_2^2 = 1^2 + (-1)^2 = 2$.
+- Mô hình 2 nhảy vọt phức tạp ` + '`w2 = [10.0, -10.0]`' + String.raw`: $\|w_2\|_2^2 = 100 + 100 = 200$.
+Với mức phạt tiên nghiệm $\lambda = 0.01$: Loss của mô hình 1 là $0.5 + 0.02 = \mathbf{0.52}$, còn mô hình 2 bị phạt thành $0.5 + 2.00 = \mathbf{2.50}$. Mô hình tự động ưu tiên trọng số gọn gàng hơn!`,
           body: String.raw`Xác suất cung cấp cơ sở lý thuyết chặt chẽ lý giải vì sao các hàm mất mát tiêu chuẩn có dạng như hiện nay:
 - **Gaussian Likelihood $\equiv$ MSE Loss**: Nếu $y_i = w^\top x_i + \varepsilon_i$ với $\varepsilon_i \stackrel{\text{i.i.d.}}{\sim} \mathcal{N}(0, \sigma^2)$, tối đa hóa $\log p(y \mid X, w)$ tương đương tối thiểu hóa $\sum_{i=1}^n (y_i - w^\top x_i)^2$.
 - **Gaussian Prior $\equiv$ Ridge ($L_2$)**: Nếu đặt thêm tiên nghiệm $w \sim \mathcal{N}(0, \tau^2 I)$, số hạng $-\log p(w) = \frac{1}{2\tau^2}\|w\|_2^2 + \text{const}$ chính xác là thành phần phạt Ridge với $\lambda = \frac{\sigma^2}{\tau^2}$!`,
@@ -389,6 +555,8 @@ _X1d = np.array([2.1, 2.5, 3.3, 1.9, 2.7, 3.0])
       moduleId: 1,
       order: 3,
       title: 'Empirical Risk Minimization & Phân rã Bias–Variance',
+      bigPicture:
+        'Tại sao có những mô hình làm bài tập ở nhà **đúng 100%** nhưng lúc gặp dữ liệu thật ngoài đời lại đoán sai bét (**Overfitting** — học vẹt), còn mô hình khác quá đơn giản lại chẳng giải quyết được gì (**Underfitting**)? Bài này chia lỗi sai của mọi thuật toán ML thành đúng 3 mảnh ghép rõ ràng (**Bias**, **Variance**, và **Nhiễu gốc**), giúp bạn nhìn vào đồ thị là biết ngay nên thêm dữ liệu hay giảm độ phức tạp mô hình.',
       summary:
         'Khung hình thức chuẩn của học thống kê từ Risk thật tới Empirical Risk, chứng minh đầy đủ đẳng thức phân rã Bias–Variance trên sai số bình phương và khảo sát cân bằng giữa Underfitting và Overfitting.',
       outcomes: [
@@ -415,14 +583,49 @@ _X1d = np.array([2.1, 2.5, 3.3, 1.9, 2.7, 3.0])
       ],
       sections: [
         {
-          heading: '1. True Risk vs. Empirical Risk Minimization (ERM)',
+          heading: '1. Rủi ro thật (True Risk) vs Rủi ro trên tập học (ERM)',
+          realWorld:
+            'Giống như đi thi đại học: bạn mong đạt điểm cao trên **toàn bộ đề thi thật tương lai** (*True Risk*), nhưng ở nhà bạn chỉ có một cuốn sách **100 đề thi thử** (*Empirical Risk*).\n\nViệc cố tối ưu thật thấp sai số trên 100 đề thử ở nhà gọi là **ERM (Empirical Risk Minimization)**. Nếu 100 đề thử đại diện tốt và bạn không học vẹt đáp án từng câu, điểm thi thử thấp mới kéo theo điểm thi thật tốt.',
+          workedExample:
+            String.raw`Xét 1 bài kiểm tra đơn giản trên 3 mẫu thử ` + '`(x, y)`' + String.raw` mà mô hình $h$ đoán sai từng điểm là ` + '`[0.2, -0.4, 0.2]`' + String.raw`:
+- Sai số bình phương từng mẫu: ` + '`[0.04, 0.16, 0.04]`' + String.raw`.
+- **Empirical Risk $\hat{R}_n(h)$**: lấy trung bình $\frac{0.04 + 0.16 + 0.04}{3} = 0.08$.
+Mọi vòng lặp huấn luyện ` + '`fit`' + String.raw` trong ML thực chất đều chỉ tối thiểu hóa con số trung bình $\hat{R}_n(h)$ trên các mẫu đang nắm trong tay.`,
           body: String.raw`Mục tiêu tối thượng của học có giám sát là tìm giả thuyết $h \in \mathcal{H}$ cực tiểu hóa **Rủi ro kỳ vọng thật (True Risk)** trên phân phối dữ liệu chưa biết $P(X, Y)$. Vì $P(X, Y)$ không quan sát được, thuật toán học thay thế bằng cực tiểu hóa **Rủi ro thực nghiệm (Empirical Risk)** trên $n$ mẫu huấn luyện:`,
           math: String.raw`R(h) = \mathbb{E}_{(x, y)\sim P}[\ell(h(x), y)], \qquad \hat{h}_{\text{ERM}} = \arg\min_{h \in \mathcal{H}} \frac{1}{n} \sum_{i=1}^n \ell(h(x_i), y_i)`,
           intuition:
             'Sai lệch giữa mô hình tối ưu trong tập giả thuyết $\\mathcal{H}$ và quy luật thật gọi là **Approximation Error**; sai lệch do chỉ có $n$ mẫu hữu hạn thay vì toàn bộ phân phối gọi là **Estimation Error**.',
         },
         {
-          heading: '2. Định lý Phân rã Bias–Variance (Chứng minh đầy đủ)',
+          heading: '2. Phân rã Bias–Variance: Trò chơi bắn cung vào bia',
+          realWorld:
+            'Hãy tưởng tượng một cung thủ bắn 4 mũi tên vào tâm bia (tương ứng 4 lần huấn luyện mô hình trên 4 bộ dữ liệu ngẫu nhiên hơi khác nhau):\n- **Bias (Độ chệch)** = Tâm ngắm bị lệch khỏi hồng tâm (dù bắn tụ một chỗ nhưng toàn trúng góc trên bên phải — mô hình quá cứng nhắc, *Underfitting*).\n- **Variance (Phương sai)** = Tay cung thủ bị run (mũi tên bay tản mát mỗi phát một nơi theo nhiễu dữ liệu — mô hình quá ngoằn ngoèo, *Overfitting*).\n- **Nhiễu $\\sigma^2$** = Gió thổi ngẫu nhiên không thể tránh khỏi dù cung thủ giỏi đến đâu.',
+          workedExample:
+            String.raw`Giả sử giá trị đúng tại điểm kiểm tra $x$ là ` + '`f_true = 10.0`' + String.raw` (tạm bỏ qua gió $\sigma^2 = 0.25$). Ta train mô hình 3 lần trên 3 bộ dữ liệu khác nhau và thu được 3 dự đoán ` + '`[11, 13, 15]`' + String.raw`:
+
+- **Bước 1 (Dự đoán trung bình $\bar{f}$)**: $(11 + 13 + 15) / 3 = \mathbf{13.0}$.
+- **Bước 2 (Tính Bias²)**: Tâm bắn trung bình lệch khỏi đích ` + '`10.0`' + String.raw` bao nhiêu? $(13.0 - 10.0)^2 = 3^2 = \mathbf{9.0}$.
+- **Bước 3 (Tính Variance)**: Các phát bắn tản mát quanh mức trung bình ` + '`13.0`' + String.raw` bao nhiêu?
+  $\frac{(11 - 13)^2 + (13 - 13)^2 + (15 - 13)^2}{3} = \frac{4 + 0 + 4}{3} = \mathbf{2.667}$.
+- **Bước 4 (Kiểm chứng đẳng thức tổng)**:
+  - Tổng 3 mảnh: $\text{Bias}^2 + \text{Var} + \sigma^2 = 9.0 + 2.667 + 0.25 = \mathbf{11.917}$.
+  - Tính sai số bình phương trực tiếp từng lần rồi trung bình + gió: $\frac{(11-10)^2 + (13-10)^2 + (15-10)^2}{3} + 0.25 = \frac{1 + 9 + 25}{3} + 0.25 = 11.667 + 0.25 = \mathbf{11.917}$! Khớp nhau chính xác tuyệt đối!`,
+          codeBridge: {
+            title: 'Ước lượng Bias² và Variance từ ma trận M lần chạy',
+            pythonLoop: `# preds là bảng M hàng (số lần train), N cột (số điểm test)
+M, N = len(preds), len(f_true)
+mean_p = [sum(preds[m][j] for m in range(M)) / M for j in range(N)]
+bias_sq = sum((mean_p[j] - f_true[j]) ** 2 for j in range(N)) / N
+variance = sum(
+    sum((preds[m][j] - mean_p[j]) ** 2 for m in range(M)) / M
+    for j in range(N)
+) / N`,
+            numpyWay: `mean_pred = np.mean(preds, axis=0)      # Trung bình dọc theo M lần train
+bias_sq = np.mean((mean_pred - f_true) ** 2)
+variance = np.mean(np.var(preds, axis=0))`,
+            explanation:
+              'Nhờ `axis=0` gộp qua toàn bộ `M` lần thử nghiệm, chỉ 3 dòng NumPy đã tách bạch xong thành phần sai số do công thức mô hình yếu (`bias_sq`) khỏi sai số do mô hình nhạy cảm với dữ liệu (`variance`).',
+          },
           body: String.raw`Giả sử dữ liệu sinh bởi $y = f(x) + \varepsilon$ với $\mathbb{E}[\varepsilon] = 0$, $\text{Var}[\varepsilon] = \sigma^2$. Ký hiệu $\hat{f}(x) = \hat{f}_{\mathcal{D}}(x)$ là mô hình học được từ tập mẫu ngẫu nhiên $\mathcal{D}$ cỡ $n$, và $\bar{f}(x) = \mathbb{E}_{\mathcal{D}}[\hat{f}(x)]$ là dự đoán trung bình qua vô số lần lấy mẫu $\mathcal{D}$ mới. Thêm bớt $\bar{f}(x)$ rồi khai triển kỳ vọng, các số hạng chéo triệt tiêu nhờ $\mathbb{E}[\varepsilon] = 0$ và $\mathbb{E}[\hat{f}(x) - \bar{f}(x)] = 0$:`,
           math: String.raw`\mathbb{E}_{\mathcal{D}, \varepsilon}\!\left[(y - \hat{f}(x))^2\right] = \underbrace{\big(f(x) - \mathbb{E}_{\mathcal{D}}[\hat{f}(x)]\big)^2}_{\text{Bias}^2[\hat{f}(x)]} + \underbrace{\mathbb{E}_{\mathcal{D}}\!\left[\big(\hat{f}(x) - \mathbb{E}_{\mathcal{D}}[\hat{f}(x)]\big)^2\right]}_{\text{Var}[\hat{f}(x)]} + \underbrace{\sigma^2}_{\text{Irreducible Noise}}`,
           intuition:
@@ -432,6 +635,8 @@ _X1d = np.array([2.1, 2.5, 3.3, 1.9, 2.7, 3.0])
         },
         {
           heading: '3. Điều chuẩn (Regularization) & Ghi chú về Double Descent',
+          realWorld:
+            'Nếu tay cung thủ bị run quá mạnh (**Variance cao / Overfitting**), ta làm gì? Có 2 cách: (1) **Cho tập bắn nhiều hơn** (tăng cỡ dữ liệu train $n$), hoặc (2) **Gắn thanh giữ ổn định lên cánh cung** (**Regularization**) — chấp nhận kéo ngắm hơi lệch đi một chút cực nhỏ (tăng Bias nhẹ) đổi lại tay đỡ run đi rất nhiều (hạ mạnh Variance).',
           body: String.raw`Trong miền cổ điển (classical regime), khi độ phức tạp mô hình (bậc đa thức $d$, chiều sâu cây, số tham số) tăng: Bias giảm dần còn Variance tăng vọt, tạo ra đường cong tổng lỗi Test hình chữ U. Kỹ thuật Regularization (như Ridge $\lambda \|w\|_2^2$) chấp nhận hy sinh một chút Bias tăng nhẹ để kéo giảm mạnh Variance.
 
 Ở chế độ hiện đại (over-parameterized regime với mạng sâu có số tham số $p \gg n$), đường cong rủi ro Test có thể giảm trở lại sau đỉnh nội suy (*Double Descent*) nhờ thiên vị ngầm (implicit bias) hướng tới nghiệm chuẩn cực tiểu.`,
@@ -502,6 +707,8 @@ _noise_var = 0.04
       moduleId: 1,
       order: 4,
       title: 'Lý thuyết Tổng quát hóa (PAC, VC-Dimension) & Quy trình Thực nghiệm Chuẩn',
+      bigPicture:
+        'Hai câu hỏi sống còn trước khi đem mô hình ra thực tế: **(1) Cần thu thập bao nhiêu mẫu dữ liệu** thì mới đáng tin cậy? và **(2) Làm sao biết chắc điểm kiểm thử cao là năng lực thật chứ không phải do ăn gian (Data Leakage)?** Bài này giải thích định lượng từ phép đếm mẫu tới kỷ luật chia tập Train/Validation/Test không bao giờ bị hớ.',
       summary:
         'Bảo chứng toán học cho việc học từ mẫu hữu hạn: bất đẳng thức Hoeffding, độ phức tạp mẫu trong khung PAC Learning, chiều VC (VC-Dimension) và quy trình tách dữ liệu chuẩn chống rò rỉ dữ liệu (Data Leakage).',
       outcomes: [
@@ -528,14 +735,24 @@ _noise_var = 0.04
       ],
       sections: [
         {
-          heading: '1. Bất đẳng thức Hoeffding & Độ phức tạp mẫu PAC (|H| hữu hạn)',
+          heading: '1. Bất đẳng thức Hoeffding: Cần bao nhiêu dữ liệu là đủ?',
+          realWorld:
+            'Nếu bạn tung đồng xu `5` lần thấy ra `4` lần Ngửa (`80%`), chẳng ai tin đồng xu đó lệch `80%` vì số lần thử quá ít! Nhưng nếu tung `2.000` lần mà vẫn ra `80%`, gần như chắc chắn nó lệch thật.\n\n**Bất đẳng thức Hoeffding** trả lời chính xác câu hỏi: nếu bạn muốn sai lệch giữa điểm thi thử ở nhà và điểm thật ngoài đời **không vượt quá $\\epsilon = 5\\%$**, với độ chắc chắn **$\\ge 95\\%$**, thì bạn phải thu thập tối thiểu bao nhiêu mẫu $n$?',
+          workedExample:
+            String.raw`Thử thay số trực tiếp vào công thức khi phải thử ` + '`100`' + String.raw` cấu hình mô hình khác nhau ($|\mathcal{H}| = 100$), muốn sai lệch nhỏ hơn $\epsilon = 0.05$ (5%) với độ tin cậy $1 - \delta = 0.95$ ($\delta = 0.05$):
+
+$$n \ge \frac{1}{2 \cdot 0.05^2} \ln\left(\frac{2 \times 100}{0.05}\right) = 200 \cdot \ln(4000) \approx 200 \times 8.294 \approx \mathbf{1{,}659\text{ mẫu}}$$
+
+**Điều thú vị**: Nếu thử gấp **10 lần** số cấu hình ($1{,}000$ thay vì $100$), số mẫu cần thiết chỉ tăng nhẹ từ ` + '`1,659`' + String.raw` lên ` + '`2,119`' + String.raw` (tăng theo $\ln |\mathcal{H}|$ rất chậm, chứ không nhân 10!). Nhưng nếu muốn giảm sai số xuống một nửa ($\epsilon = 0.025$), cần dữ liệu tăng **gấp 4 lần** (` + '`1 / eps^2`' + String.raw`)!`,
           body: String.raw`Với hàm mất mát $0\text{--}1$, cho bất kỳ giả thuyết cố định $h \in \mathcal{H}$, bất đẳng thức Hoeffding giới hạn xác suất sai lệch giữa rủi ro thật $R(h)$ và rủi ro thực nghiệm $\hat{R}_n(h)$ trên $n$ mẫu i.i.d. Áp dụng Union Bound qua toàn bộ $k = |\mathcal{H}|$ giả thuyết, với xác suất ít nhất $1 - \delta$ (khung Probably Approximately Correct — PAC), mọi $h \in \mathcal{H}$ đều thỏa mãn hội tụ đều:`,
           math: String.raw`|R(h) - \hat{R}_n(h)| \le \sqrt{\frac{\ln(2|\mathcal{H}| / \delta)}{2n}} \quad \Longleftrightarrow \quad n \ge \frac{1}{2\epsilon^2} \ln\frac{2|\mathcal{H}|}{\delta}`,
           intuition:
             'Đáng chú ý, số lượng mẫu $n$ chỉ tăng theo $\\ln |\\mathcal{H}|$ (tốc độ logarit), nên việc xét hàng tỉ bộ tham số có thể được kiểm soát bằng lượng dữ liệu khả thi. Tuy nhiên nếu tập giả thuyết vô hạn ($\\mathcal{H}$ liên tục), chặn chứa $\\ln |\\mathcal{H}|$ trở nên vô nghĩa.',
         },
         {
-          heading: '2. Shattering & Chiều VC (VC-Dimension) cho lớp giả thuyết vô hạn',
+          heading: '2. Shattering & Chiều VC (VC-Dimension)',
+          realWorld:
+            'Một đường thẳng vẽ trên tờ giấy 2D có **vô số** vị trí/độ dốc khác nhau, nên ta không thể đếm $|\\mathcal{H}|$. Vậy làm sao đo "độ linh hoạt" của đường thẳng?\n\nTa chơi trò **phá vỡ (Shatter)**: đặt `m` chấm tròn lên giấy, bạn có dám chắc **dù tôi tô màu Xanh/Đỏ tùy ý cho từng chấm**, bạn vẫn luôn kẻ được **1 đường thẳng duy nhất** tách sạch Đỏ ra khỏi Xanh?\n- Với `3` chấm bất kỳ (không thẳng hàng): **Luôn tách được** cả $2^3 = 8$ kiểu tô màu!\n- Với `4` chấm đặt 4 góc hình vuông: hễ tô chéo kiểu chữ X (`[Góc 1, 3 = Xanh]`, `[Góc 2, 4 = Đỏ]`, giống hàm XOR) là **chịu thua**!\n\nCon số tối đa tách được trong mọi kiểu tô màu chính là **Chiều VC** ($\\text{VC} = 3$ cho đường thẳng 2D, tổng quát $\\text{VC} = d + 1$).',
           body: String.raw`Để đo sức biểu diễn của một lớp giả thuyết vô hạn $\mathcal{H}$, Vapnik và Chervonenkis định nghĩa **Chiều VC ($\text{VC}(\mathcal{H})$)** là số lượng điểm tối đa mà $\mathcal{H}$ có thể **phá vỡ (shatter)** — tức chia cắt đúng cho mọi tổ hợp $2^m$ phép gán nhãn nhị phân trên $m$ điểm đó (tồn tại ít nhất một cách sắp xếp $m$ điểm để thực hiện điều này).
 
 Kết quả kinh điển: Lớp siêu phẳng phân tách tuyến tính trên $\mathbb{R}^d$ (với bias) có $\text{VC}(\mathcal{H}) = d + 1$. Theo Định lý Vapnik–Chervonenkis, với xác suất $\ge 1 - \delta$, độ chênh tổng quát hóa được chặn bởi:`,
@@ -545,6 +762,28 @@ Kết quả kinh điển: Lớp siêu phẳng phân tách tuyến tính trên $\
         },
         {
           heading: '3. Kỷ luật thực nghiệm & Chống rò rỉ dữ liệu (Data Leakage)',
+          realWorld:
+            'Sai lầm kinh điển khiến hàng loạt bài thực nghiệm hỏng hoàn toàn: chuẩn hóa (`StandardScaler`) hoặc chọn lọc đặc trưng **trên cả bảng dữ liệu gốc** rồi mới đem chia Train / Test!\n\nNếu bạn để giá trị cực lớn của tập Test tham gia vào tính trung bình $\\mu$ và độ lệch chuẩn $\\sigma$ lúc biến đổi tập Train, thì thực chất mô hình **đã lén nhìn thấy trước thông tin tương lai của đề thi Test**, tạo ra kết quả ảo trên giấy.',
+          workedExample:
+            String.raw`Giả sử tập Train chỉ có 3 số ` + '`[1, 2, 3]`' + String.raw` ($\mu_{\text{tr}} = 2$, $\sigma_{\text{tr}} \approx 0.82$), còn tập Validation có một giá trị ngoại lệ cực lớn ` + '`[98]`' + String.raw`:
+
+- **Cách CHUẨN (Không rò rỉ)**: chỉ tính $\mu, \sigma$ từ Train ` + '`[1, 2, 3]`' + String.raw`, nên ` + '`Z_train = [-1.22, 0.0, +1.22]`' + String.raw` bất biến mãi mãi.
+- **Cách SAI (Rò rỉ từ Val sang Train)**: gộp ` + '`[1, 2, 3, 98]`' + String.raw` tính chung $\mu = 26$, $\sigma = 41.6$ $\implies$ ` + '`Z_train`' + String.raw` biến thành ` + '`[-0.60, -0.58, -0.55]`' + String.raw`! Toàn bộ dữ liệu Train bị méo mó chỉ vì một số ở tập Test!`,
+          codeBridge: {
+            title: 'Luôn fit thống kê (mu, sd) DUY NHẤT trên X_train',
+            pythonLoop: `# SAI: tính mean/std trên toàn bộ dữ liệu X trước khi chia!
+# mu_all = X.mean(axis=0); sd_all = X.std(axis=0)  <-- RÒ RỈ!
+
+# ĐÚNG:
+mu_tr = X_train.mean(axis=0)
+sd_tr = X_train.std(axis=0)`,
+            numpyWay: `mu = X_train.mean(axis=0)
+sd = np.where(X_train.std(axis=0) == 0, 1.0, X_train.std(axis=0))
+Z_train = (X_train - mu) / sd
+Z_val   = (X_val   - mu) / sd   # Dùng lại (mu, sd) của Train!`,
+            explanation:
+              'Tập `X_val` và `X_test` **không bao giờ** được phép tự gọi `.mean()` hay `.std()` riêng hoặc tham gia tính toán trước khi biến đổi tập `X_train`.',
+          },
           body: String.raw`Để kết quả đánh giá trên phòng lab phản ánh đúng lỗi tổng quát hóa $R(h)$, dữ liệu phải được chia tách nghiêm ngặt ngay từ bước đầu tiên trước mọi thao tác thăm dò (EDA), chọn đặc trưng hay biến đổi dữ liệu:
 - **Train**: Dùng để fit tham số mô hình $w$ **và** ước lượng toàn bộ thống kê tiền xử lý ($\mu_{\text{train}}, \sigma_{\text{train}}$, ngưỡng điền khuyết, thành phần PCA).
 - **Validation** (hoặc K-Fold CV trong phần Train): Dùng để chọn siêu tham số ($k$, bậc đa thức, $\lambda$) và kiến trúc mô hình.

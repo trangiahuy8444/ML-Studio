@@ -4,12 +4,33 @@ export interface GradReference {
   note: string;
 }
 
+export interface GradSymbolDef {
+  symbol: string;
+  readAs: string;
+  meaning: string;
+}
+
+export interface GradCodeBridge {
+  title?: string;
+  pythonLoop: string;
+  numpyWay: string;
+  explanation: string;
+}
+
 export interface GradSection {
   heading: string;
   body: string;
   math?: string;
   intuition?: string;
   pitfall?: string;
+  /** Tầng 1: Ví dụ đời thường & lý do thực tế */
+  realWorld?: string;
+  /** Tầng 2: Ví dụ tính tay từng bước bằng số nhỏ cụ thể */
+  workedExample?: string;
+  /** Tầng 3: Cầu nối từ vòng lặp Python quen thuộc sang NumPy */
+  codeBridge?: GradCodeBridge;
+  /** Tầng 4: Giải nghĩa riêng từng ký hiệu xuất hiện trong mục này */
+  symbols?: GradSymbolDef[];
 }
 
 export interface GradExercise {
@@ -77,6 +98,8 @@ export interface GradUnit {
   order: number;
   title: string;
   summary: string;
+  /** Bức tranh toàn cảnh bằng tiếng Việt đời thường: Bài này giải quyết chuyện gì ngoài đời? */
+  bigPicture?: string;
   outcomes: string[];
   references: GradReference[];
   sections: GradSection[];
