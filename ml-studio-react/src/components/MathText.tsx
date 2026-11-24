@@ -10,28 +10,22 @@ function escapeHtml(text: string): string {
 }
 
 function renderInlineSegment(segment: string): string {
+  const tokens: string[] = [];
+  const stash = (html: string) => {
+    const key = `\u0000MLT${tokens.length}\u0000`;
+    tokens.push(html);
+    return key;
+  };
+
   // Handle inline `code` first so $ inside backticks is rendered literally
-  const codeParts = segment.split(/(`[^`]+`)/g);
-  return codeParts
-    .map((part) => {
-      if (part.startsWith('`') && part.endsWith('`') && part.length >= 2) {
-        return `<code>${escapeHtml(part.slice(1, -1))}</code>`;
-      }
-      // Split by inline math $...$ (single dollar, non-greedy, not preceded by \)
-      const mathParts = part.split(/(\$[^$\n]+\$)/g);
-      return mathParts
-        .map((m) => {
-          if (m.startsWith('$') && m.endsWith('$') && m.length >= 3) {
-            const expr = m.slice(1, -1).trim();
-            return katex.renderToString(expr, { displayMode: false, throwOnError: false });
-          }
-          // Escape HTML, then render **bold**
-          const escaped = escapeHtml(m);
-          return escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-        })
-        .join('');
-    })
-    .join('');
+  let s = segment.replace(/`([^`]+)`/g, (_, inner: string) => stash(`<code>${escapeHtml(inner)}</code>`));
+  // Then render inline math $...$ before **bold** so bold wraps across math spans seamlessly
+  s = s.replace(/\$([^$\n]+)\$/g, (_, expr: string) =>
+    stash(katex.renderToString(expr.trim(), { displayMode: false, throwOnError: false })),
+  );
+  // Escape remaining HTML, apply **bold**, and restore tokens
+  s = escapeHtml(s).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  return s.replace(/\u0000MLT(\d+)\u0000/g, (_, idx: string) => tokens[Number(idx)] ?? '');
 }
 
 function renderMarkdownMathToHtml(source: string): string {

@@ -92,6 +92,14 @@ export type GradSimulationId =
   | 'm10-u4'
   | 'm10-u5';
 
+export interface GradSampleTable {
+  caption: string;
+  columns: string[];
+  rows: (string | number)[][];
+  highlightTargetCol?: number;
+  footnote?: string;
+}
+
 export interface GradUnit {
   id: string;
   moduleId: number;
@@ -100,6 +108,7 @@ export interface GradUnit {
   summary: string;
   /** Bức tranh toàn cảnh bằng tiếng Việt đời thường: Bài này giải quyết chuyện gì ngoài đời? */
   bigPicture?: string;
+  bigPictureTable?: GradSampleTable;
   outcomes: string[];
   references: GradReference[];
   sections: GradSection[];

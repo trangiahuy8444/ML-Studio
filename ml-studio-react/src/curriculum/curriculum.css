@@ -600,3 +600,64 @@
 .inline-symbol-row .math-text p {
   margin: 0;
 }
+
+.df-head-box {
+  margin-top: 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: #070e1a;
+  overflow: hidden;
+}
+.df-head-caption {
+  padding: 8px 12px;
+  background: #0b1628;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.df-head-caption code {
+  color: #89ddff;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+.df-head-scroll {
+  overflow-x: auto;
+}
+.df-head-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.df-head-table th,
+.df-head-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+}
+.df-head-table th {
+  text-align: right;
+  color: var(--text-2);
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.02);
+}
+.df-head-table th:first-child,
+.df-head-table td.df-index-col {
+  text-align: left;
+  color: var(--text-3);
+  border-right: 1px solid var(--line);
+}
+.df-head-table th.df-target-col,
+.df-head-table td.df-target-col {
+  background: rgba(255, 209, 115, 0.09);
+  color: #ffd173;
+  font-weight: 700;
+}
+.df-head-footnote {
+  padding: 8px 12px;
+  background: rgba(132, 224, 168, 0.05);
+  font-size: 12.5px;
+}
+.df-head-footnote .math-text p {
+  margin: 0;
+}

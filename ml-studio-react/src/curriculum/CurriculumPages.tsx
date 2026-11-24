@@ -645,6 +645,54 @@ export function UnitPage({
           <div className="big-picture-card">
             <span className="callout-title">Học bài này để giải quyết chuyện gì ngoài đời?</span>
             <MathText text={unit.bigPicture} />
+            {unit.bigPictureTable && (
+              <div className="df-head-box">
+                <div className="df-head-caption">
+                  <code>{unit.bigPictureTable.caption}</code>
+                </div>
+                <div className="df-head-scroll">
+                  <table className="df-head-table">
+                    <thead>
+                      <tr>
+                        {unit.bigPictureTable.columns.map((col, ci) => (
+                          <th
+                            key={col}
+                            className={ci === unit.bigPictureTable?.highlightTargetCol ? 'df-target-col' : ''}
+                          >
+                            {col}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {unit.bigPictureTable.rows.map((row, ri) => (
+                        <tr key={ri}>
+                          {row.map((cell, ci) => (
+                            <td
+                              key={ci}
+                              className={
+                                ci === 0
+                                  ? 'df-index-col'
+                                  : ci === unit.bigPictureTable?.highlightTargetCol
+                                    ? 'df-target-col'
+                                    : ''
+                              }
+                            >
+                              {cell}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {unit.bigPictureTable.footnote && (
+                  <div className="df-head-footnote">
+                    <MathText text={unit.bigPictureTable.footnote} />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
         <MathText text={unit.summary} />

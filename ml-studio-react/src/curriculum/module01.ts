@@ -30,6 +30,19 @@ export const MODULE_01: GradModule = {
       title: 'Không gian đặc trưng, Đại số tuyến tính & Matrix Calculus',
       bigPicture:
         'Hãy tưởng tượng bạn viết phần mềm **dự đoán giá nhà**. Mỗi căn nhà trong Python là một list `[diện_tích, số_phòng, tuổi_nhà]`; xếp 1.000 căn lại ta có một bảng Excel — toán học gọi bảng đó là **Ma trận ($X$)**. Bài học này giúp bạn dịch các phép xử lý quen thuộc trên vòng lặp Python (`for`) sang phép tính bảng gọn nhẹ trong NumPy và hiểu trực giác cách máy tính tự "nhích" tham số để giảm sai số (Gradient).',
+      bigPictureTable: {
+        caption: '>>> df.head(4)   # Bảng Excel / Pandas: 4 dòng đầu trong 1.000 căn nhà',
+        columns: ['Dòng (i)', 'diện_tích (m²)', 'số_phòng', 'tuổi_nhà (năm)', 'giá_bán y (tỷ)'],
+        rows: [
+          ['0 (x₀)', 80, 2, 5, 3.2],
+          ['1 (x₁)', 120, 3, 2, 4.9],
+          ['2 (x₂)', 55, 1, 12, 1.9],
+          ['3 (x₃)', 95, 3, 8, 3.7],
+        ],
+        highlightTargetCol: 4,
+        footnote:
+          'Ba cột đầu tiên (`X = df[["diện_tích", "số_phòng", "tuổi_nhà"]].to_numpy()`) chính là **Ma trận $X \\in \\mathbb{R}^{1000 \\times 3}$**; cột tô vàng cuối cùng (`y = df["giá_bán"].to_numpy()`) chính là **Vector mục tiêu $y \\in \\mathbb{R}^{1000}$**.',
+      },
       summary:
         'Biểu diễn tập dữ liệu dạng ma trận thiết kế $X \\in \\mathbb{R}^{n \\times d}$, hình học của chuẩn và phép chiếu trực giao, kỹ thuật vector hóa NumPy và tính gradient dạng ma trận.',
       outcomes: [
