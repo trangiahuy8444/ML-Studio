@@ -7,6 +7,7 @@ import { MODULE_06 } from './module06.ts';
 import { MODULE_07 } from './module07.ts';
 import { MODULE_08 } from './module08.ts';
 import { MODULE_09 } from './module09.ts';
+import { MODULE_10 } from './module10.ts';
 import type { GradModule, GradResourceItem, GradUnit } from './types.ts';
 
 export type {
@@ -30,32 +31,7 @@ export const GRAD_MODULES: GradModule[] = [
   MODULE_07,
   MODULE_08,
   MODULE_09,
-  {
-    id: 10,
-    title: 'Học Tăng cường & Đồ án Nghiên cứu Cao học',
-    englishTitle: 'Reinforcement Learning & Graduate Capstone Research',
-    color: '#fb7185',
-    status: 'planned',
-    overview:
-      'Bài toán Multi-Armed Bandits (ε-greedy, UCB, Thompson Sampling), Markov Decision Processes (MDPs) và Phương trình Bellman; Quy hoạch động (Policy/Value Iteration); Học không mô hình (Monte Carlo, TD(0), SARSA, Q-Learning, DQN); Policy Gradient (REINFORCE, Actor-Critic, PPO) và Đồ án Cao học hoàn chỉnh (Ablation Study, Error Analysis, Reproducibility).',
-    outcomes: [
-      'Giải phương trình tối ưu Bellman bằng Value Iteration / Policy Iteration trên bài toán MDP rời rạc.',
-      'Phân biệt chiến lược On-policy (SARSA) và Off-policy (Q-Learning) cùng định lý hội tụ xấp xỉ hàm.',
-      'Thực hiện hoàn chỉnh một nghiên cứu thực nghiệm độc lập có Ablation Study, Seed Variance và phân tích lỗi định lượng.',
-    ],
-    sources: [
-      'Sutton & Barto — Reinforcement Learning: An Introduction (2nd Ed.)',
-      'Stanford CS229 (Part V: Reinforcement Learning)',
-    ],
-    plannedTopics: [
-      'Unit 10.1: Multi-Armed Bandits (ε-greedy, UCB, Thompson Sampling)',
-      'Unit 10.2: MDPs, Phương trình Bellman & Dynamic Programming',
-      'Unit 10.3: Model-Free RL: Monte Carlo, TD(0), SARSA, Q-Learning & DQN',
-      'Unit 10.4: Policy Gradient: REINFORCE, Actor-Critic & PPO',
-      'Unit 10.5: Đồ án Cao học: Thực nghiệm tái lập, Ablation Study & Phân tích lỗi',
-    ],
-    units: [],
-  },
+  MODULE_10,
 ];
 
 export function getModule(id: number): GradModule | undefined {

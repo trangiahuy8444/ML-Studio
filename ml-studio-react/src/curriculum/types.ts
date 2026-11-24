@@ -64,7 +64,12 @@ export type GradSimulationId =
   | 'm9-u1'
   | 'm9-u2'
   | 'm9-u3'
-  | 'm9-u4';
+  | 'm9-u4'
+  | 'm10-u1'
+  | 'm10-u2'
+  | 'm10-u3'
+  | 'm10-u4'
+  | 'm10-u5';
 
 export interface GradUnit {
   id: string;
