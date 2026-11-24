@@ -162,7 +162,7 @@ for i in range(5):
         {
           heading: '3. Gradient: Làm sao máy tính biết đường giảm sai số?',
           realWorld:
-            'Nếu ban đầu máy tính chưa biết giá trị hợp lý của `w` (ví dụ đặt toàn số `0`: `w = [0, 0, 0]`, `b = 0.0`), mức sai số bình phương trung bình trên `414` căn nhà thật sẽ rất lớn (`MSE = 1627.18`). Làm sao máy tính tự biết phải tăng hay giảm từng trọng số `w[0], w[1], w[2]`?\n\nHãy tưởng tượng bạn đứng trên một thung lũng sương mù, độ cao là **sai số MSE**. Độ dốc của mặt đất theo từng hướng chính là **Gradient ($\nabla_w$)**. Máy tính chỉ cần bước ngược chiều độ dốc (`w = w - lr * grad`) là sai số giảm xuống đều đặn sau mỗi vòng lặp!',
+            'Nếu ban đầu máy tính chưa biết giá trị hợp lý của `w` (ví dụ đặt toàn số `0`: `w = [0, 0, 0]`, `b = 0.0`), mức sai số bình phương trung bình trên `414` căn nhà thật sẽ rất lớn (`MSE = 1627.18`). Làm sao máy tính tự biết phải tăng hay giảm từng trọng số `w[0], w[1], w[2]`?\n\nHãy tưởng tượng bạn đứng trên một thung lũng sương mù, độ cao là **sai số MSE**. Độ dốc của mặt đất theo từng hướng chính là **Gradient ($\\nabla_w$)**. Máy tính chỉ cần bước ngược chiều độ dốc (`w = w - lr * grad`) là sai số giảm xuống đều đặn sau mỗi vòng lặp!',
           workedExample:
             String.raw`Thử tính Gradient bằng tay trên **2 căn đầu tiên của ` + '`real_estate.csv`' + String.raw`** tại ` + '`w = [0, 0, 0]`' + String.raw`, ` + '`b = 38.0`' + String.raw` (giá thật ` + '`y = [37.9, 42.2]`' + String.raw`):
 
