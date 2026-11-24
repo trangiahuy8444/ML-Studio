@@ -95,7 +95,7 @@ export function ProjectsHub({navigate}:{navigate:Nav}){
       <p>Mỗi dự án đi qua 5 bước: em đoán trước, tự làm bằng tay, cho máy học, thử thách mô hình, rồi rút ra kết luận. Chạy ngay trên trình duyệt, không cần cài đặt.</p></header>
     <div className="mode-switch hub"><span className="eyebrow">Cách học mặc định</span>
       <Segmented label="Cách học mặc định" options={[['forward','Học xuôi · tự xây từ đầu'],['reverse','Học ngược · tháo từ sản phẩm']]} value={mode} onChange={m=>{setMode(m);saveMode(m)}}/>
-      <p className="small-note">{mode==='reverse'?'Mỗi dự án mở ra là một mô hình đã chạy tốt; em tháo dần từng lớp rồi tự lắp lại. Riêng Dự án giá nhà vẫn học xuôi.':'Mỗi dự án bắt đầu từ trang trắng: đoán, tự làm, rồi cho máy học. Trong từng dự án em vẫn đổi được cách học.'}</p></div>
+      <p className="small-note">{mode==='reverse'?'Mỗi dự án mở ra là một mô hình đã chạy tốt; em tháo dần từng lớp rồi tự lắp lại.':'Mỗi dự án bắt đầu từ trang trắng: đoán, tự làm, rồi cho máy học. Trong từng dự án em vẫn đổi được cách học.'}</p></div>
     {CHAPTERS.filter(c=>c.projects.length).map(ch=><section className="chapter-section" key={ch.id}>
       <div className="section-head"><div><span className="eyebrow" style={{color:PHASE_COLORS[ch.id-1]}}>Chương {ch.id}</span><h2>{ch.title}</h2></div><button className="btn-quiet" onClick={()=>navigate({kind:'phase',id:ch.id})}>Mục tiêu chương <ChevronRight size={14}/></button></div>
       <div className="proj-grid">{ch.projects.map(p=><ProjectCard key={p} id={p} navigate={navigate} store={store}/>)}</div></section>)}

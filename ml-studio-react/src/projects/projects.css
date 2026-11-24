@@ -205,3 +205,6 @@ figcaption{font-size:12px;color:var(--text-2)}figcaption b{color:var(--text)}
 .big-pred span{color:var(--text-2);font-size:13px}
 .big-pred strong{font-size:56px;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
 .big-pred small{color:var(--text-3)}
+/* Dự án giá nhà ở chế độ học ngược: ẩn lời dẫn gốc ngay sau lời dẫn ngược */
+.housing-rev .project-controls>.step-intro+p{display:none}
+.housing-rev .project-controls{display:flex;flex-direction:column;gap:12px}
