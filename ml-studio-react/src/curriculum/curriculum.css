@@ -350,9 +350,6 @@
   .module-card {
     grid-template-columns: 1fr;
   }
-  .code-bridge-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* Personalized 4-Layer Learning Mode & Math Symbol Decoder */
@@ -491,10 +488,6 @@
   border-left: 3px solid #ffd173;
   background: rgba(255, 209, 115, 0.05);
 }
-.layer-3 {
-  border-left: 3px solid #38bdf8;
-  background: rgba(56, 189, 248, 0.05);
-}
 .layer-badge {
   display: inline-block;
   padding: 3px 9px;
@@ -513,47 +506,9 @@
   background: rgba(255, 209, 115, 0.16);
   color: #ffd173;
 }
-.layer-badge-3 {
-  background: rgba(56, 189, 248, 0.16);
-  color: #7dd3fc;
-}
 .layer-badge-4 {
   background: rgba(168, 167, 255, 0.16);
   color: #c4c3ff;
-}
-
-.code-bridge-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 10px;
-}
-.code-bridge-col {
-  background: #070e1a;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 10px 12px;
-  min-width: 0;
-}
-.code-bridge-col.numpy {
-  border-color: rgba(56, 189, 248, 0.4);
-}
-.code-bridge-label {
-  display: block;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--text-3);
-  margin-bottom: 6px;
-}
-.code-bridge-col.numpy .code-bridge-label {
-  color: #7dd3fc;
-}
-.code-bridge-col pre {
-  margin: 0;
-  overflow-x: auto;
-  font-size: 12.5px;
-  line-height: 1.55;
-  color: #e2e8f0;
 }
 
 .layer4-details {

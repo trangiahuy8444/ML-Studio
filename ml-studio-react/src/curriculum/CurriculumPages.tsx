@@ -62,7 +62,7 @@ function LearnerModeBanner({
         <span className="eyebrow">Lộ trình cá nhân hóa · Từ Python &amp; Trực giác → Cao học CS</span>
         <p>
           {mode === 'guided'
-            ? 'Đang bật Chế độ 4 Tầng: Ví dụ đời thường → Tính tay số nhỏ → Code vòng lặp sang NumPy → Mở công thức Cao học khi sẵn sàng.'
+            ? 'Đang bật Chế độ 3 Tầng: Ví dụ đời thường → Tính tay số nhỏ + Cell Python chạy thử → Mở công thức Cao học khi sẵn sàng.'
             : 'Đang bật Chế độ Chuẩn Cao học: Hiển thị đầy đủ công thức toán học và dẫn xuất ngay lập tức cùng bảng giải mã ký hiệu.'}
         </p>
       </div>
@@ -72,7 +72,7 @@ function LearnerModeBanner({
           className={`mode-btn ${mode === 'guided' ? 'active' : ''}`}
           onClick={() => onChange('guided')}
         >
-          4 Tầng: Dễ hiểu → Cao học
+          3 Tầng: Dễ hiểu → Cao học
         </button>
         <button
           type="button"
@@ -771,13 +771,13 @@ export function UnitPage({
             </ul>
           </section>
 
-          {/* Phần 1: Lý thuyết 4 Tầng + Từ điển ký hiệu */}
+          {/* Phần 1: Lý thuyết 3 Tầng + Từ điển ký hiệu */}
           <section className="panel" id="unit-theory">
-            <span className="eyebrow">Phần 1 · Lý thuyết 4 Tầng (Trực giác → Tính tay → Code → Toán Cao học)</span>
+            <span className="eyebrow">Phần 1 · Lý thuyết 3 Tầng (Trực giác → Tính tay &amp; Python → Toán Cao học)</span>
             <h2>Cơ sở hình thức &amp; Trực giác</h2>
             <UnitSymbolGlossary unit={unit} defaultOpen={mode === 'guided'} />
             {unit.sections.map((sec, secIdx) => {
-              const hasLayers = Boolean(sec.realWorld || sec.workedExample || sec.codeBridge);
+              const hasLayers = Boolean(sec.realWorld || sec.workedExample);
               const workedKey = `${unit.id}::sec-${secIdx}`;
               const workedCodeVal = sec.workedExampleCode ? (workedCodes[workedKey] ?? sec.workedExampleCode) : '';
               const workedRunState = workedRuns[workedKey];
@@ -856,34 +856,11 @@ export function UnitPage({
                     </div>
                   )}
 
-                  {sec.codeBridge && (
-                    <div className="layer-card layer-3">
-                      <span className="layer-badge layer-badge-3">
-                        Tầng 3 · {sec.codeBridge.title || 'Từ vòng lặp Python quen thuộc → NumPy'}
-                      </span>
-                      <div className="code-bridge-grid">
-                        <div className="code-bridge-col">
-                          <span className="code-bridge-label">1. Vòng lặp Python cơ bản</span>
-                          <pre>
-                            <code>{sec.codeBridge.pythonLoop}</code>
-                          </pre>
-                        </div>
-                        <div className="code-bridge-col numpy">
-                          <span className="code-bridge-label">2. Viết gọn bằng NumPy</span>
-                          <pre>
-                            <code>{sec.codeBridge.numpyWay}</code>
-                          </pre>
-                        </div>
-                      </div>
-                      <MathText text={sec.codeBridge.explanation} />
-                    </div>
-                  )}
-
                   {hasLayers && mode === 'guided' ? (
                     <details className="layer4-details" key={`${sec.heading}-${mode}`}>
                       <summary>
                         <span>
-                          Tầng 4 · Mở Công thức Toán chuẩn Cao học &amp; Giải thích ký hiệu (khi đã hiểu 3 tầng trên)
+                          Tầng 3 · Mở Công thức Toán chuẩn Cao học &amp; Giải thích ký hiệu (khi đã hiểu 2 tầng trên)
                         </span>
                       </summary>
                       <div className="layer4-body">
@@ -894,7 +871,7 @@ export function UnitPage({
                     <div className={hasLayers ? 'layer4-open' : ''}>
                       {hasLayers && (
                         <span className="layer-badge layer-badge-4" style={{ marginTop: 12 }}>
-                          Tầng 4 · Công thức Toán chuẩn Cao học
+                          Tầng 3 · Công thức Toán chuẩn Cao học
                         </span>
                       )}
                       <SectionFormalLayer sec={sec} />
