@@ -36,7 +36,7 @@ test('Modules 1 to 10 have 41 complete graduate units with theory, references, e
 
   const ready = allReadyUnits();
   assert.equal(ready.length, 41);
-  assert.equal(ready.reduce((sum, u) => sum + u.exercises.length, 0), 55);
+  assert.equal(ready.reduce((sum, u) => sum + u.exercises.length, 0), 56);
 
   for (const u of ready) {
     assert(u.outcomes.length >= 3, `${u.id} outcomes`);

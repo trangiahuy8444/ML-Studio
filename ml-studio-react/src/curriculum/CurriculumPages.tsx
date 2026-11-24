@@ -808,7 +808,7 @@ export function UnitPage({
                                   type="button"
                                   className="btn-primary worked-run-btn"
                                   disabled={workedRunState?.running}
-                                  onClick={() => void runWorkedCode(workedKey, sec.workedExampleCode!)}
+                                  onClick={() => void runWorkedCode(workedKey, workedCodeVal)}
                                 >
                                   <Play size={12} /> {workedRunState?.running ? 'Đang chạy...' : 'Chạy ví dụ'}
                                 </button>
@@ -830,7 +830,7 @@ export function UnitPage({
                               disabled={workedRunState?.running}
                               rows={Math.min(14, Math.max(5, workedCodeVal.split('\n').length + 1))}
                               onChange={(val) => setWorkedCodes((old) => ({ ...old, [workedKey]: val }))}
-                              onRun={() => void runWorkedCode(workedKey, sec.workedExampleCode!)}
+                              onRun={() => void runWorkedCode(workedKey, workedCodeVal)}
                             />
                             {workedRunState && workedRunState.outputs.length > 0 && (
                               <div className="worked-code-out">

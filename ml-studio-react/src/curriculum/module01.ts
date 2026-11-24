@@ -29,26 +29,26 @@ export const MODULE_01: GradModule = {
       order: 1,
       title: 'Không gian đặc trưng, Đại số tuyến tính & Matrix Calculus',
       bigPicture:
-        'Hãy tưởng tượng bạn viết phần mềm **dự đoán giá nhà**. Mỗi căn nhà trong Python là một list `[diện_tích, số_phòng, tuổi_nhà]`; xếp 1.000 căn lại ta có một bảng Excel — toán học gọi bảng đó là **Ma trận ($X$)**. Bài học này giúp bạn dịch các phép xử lý quen thuộc trên vòng lặp Python (`for`) sang phép tính bảng gọn nhẹ trong NumPy và hiểu trực giác cách máy tính tự "nhích" tham số để giảm sai số (Gradient).',
+        'Xuyên suốt Buổi 1, bạn sẽ làm việc trực tiếp trên bộ dữ liệu nhà đất thật **UCI Real Estate Valuation** (`414` giao dịch bất động sản tại Tân Bắc, Đài Loan — nạp sẵn trong Python tại `data/real_estate.csv`). Mỗi căn nhà là một hàng gồm tuổi nhà, khoảng cách tới ga tàu điện MRT, số cửa hàng tiện lợi xung quanh; ghép `414` căn lại thành **Ma trận thiết kế $X$**. Từ bảng thật này, bạn sẽ đi từng bước: chuẩn hóa cột khác đơn vị → nhân trọng số dự đoán giá → tính Gradient → tự huấn luyện mô hình ở cuối bài.',
       bigPictureTable: {
-        caption: '>>> df.head(4)   # Bảng Excel / Pandas: 4 dòng đầu trong 1.000 căn nhà',
-        columns: ['Dòng (i)', 'diện_tích (m²)', 'số_phòng', 'tuổi_nhà (năm)', 'giá_bán y (tỷ)'],
+        caption: ">>> df = pd.read_csv('data/real_estate.csv'); df[['age_years', 'mrt_distance_m', 'stores', 'price_10k_ntd_per_ping']].head(4)   # 4 trong 414 căn thật",
+        columns: ['Dòng (i)', 'age_years (tuổi)', 'mrt_distance_m (m)', 'stores (cửa hàng)', 'price y (10k NTD/ping)'],
         rows: [
-          ['0 (x₀)', 80, 2, 5, 3.2],
-          ['1 (x₁)', 120, 3, 2, 4.9],
-          ['2 (x₂)', 55, 1, 12, 1.9],
-          ['3 (x₃)', 95, 3, 8, 3.7],
+          ['0 (x₀)', 32.0, 84.88, 10, 37.9],
+          ['1 (x₁)', 19.5, 306.59, 9, 42.2],
+          ['2 (x₂)', 13.3, 561.98, 5, 47.3],
+          ['3 (x₃)', 13.3, 561.98, 5, 54.8],
         ],
         highlightTargetCol: 4,
         footnote:
-          'Ba cột đầu tiên (`X = df[["diện_tích", "số_phòng", "tuổi_nhà"]].to_numpy()`) chính là **Ma trận $X \\in \\mathbb{R}^{1000 \\times 3}$**; cột tô vàng cuối cùng (`y = df["giá_bán"].to_numpy()`) chính là **Vector mục tiêu $y \\in \\mathbb{R}^{1000}$**.',
+          'Ba cột đặc trưng (`X = df[["age_years", "mrt_distance_m", "stores"]].to_numpy()`) tạo thành **Ma trận $X \\in \\mathbb{R}^{414 \\times 3}$**; cột tô vàng cuối cùng (`y = df["price_10k_ntd_per_ping"].to_numpy()`) là **Vector giá nhà $y \\in \\mathbb{R}^{414}$**.',
       },
       summary:
-        'Biểu diễn tập dữ liệu dạng ma trận thiết kế $X \\in \\mathbb{R}^{n \\times d}$, hình học của chuẩn và phép chiếu trực giao, kỹ thuật vector hóa NumPy và tính gradient dạng ma trận.',
+        'Biểu diễn tập dữ liệu dạng ma trận thiết kế $X \\in \\mathbb{R}^{n \\times d}$, hình học của chuẩn và phép chiếu trực giao, kỹ thuật vector hóa NumPy và tính gradient dạng ma trận trên bộ dữ liệu UCI Real Estate Valuation.',
       outcomes: [
-        'Phân biệt hình học giữa các chuẩn $L_1, L_2, L_\\infty$ và chuẩn Frobenius trên không gian đặc trưng.',
-        'Sử dụng broadcasting NumPy để tính khoảng cách cặp và chuẩn hóa Z-score ở độ phức tạp tối ưu không cần vòng lặp.',
-        'Tính chính xác gradient theo vector tham số $w$ cho hàm tuyến tính và dạng toàn phương $\\|Xw - y\\|_2^2$.',
+        'Phân biệt hình học giữa các chuẩn $L_1, L_2, L_\\infty$ và chuẩn hóa Z-score cho các cột khác đơn vị trong `real_estate.csv`.',
+        'Sử dụng broadcasting NumPy để chuẩn hóa ma trận và đo khoảng cách giữa các căn nhà không cần vòng lặp.',
+        'Tính chính xác gradient theo vector tham số $w$ cho hàm mất mát bình phương trung bình $\\|Xw - y\\|_2^2$ và huấn luyện dự đoán giá nhà.',
       ],
       references: [
         {
@@ -71,65 +71,36 @@ export const MODULE_01: GradModule = {
         {
           heading: '1. Ma trận thiết kế, Chuẩn vector & Chuẩn hóa Z-score',
           realWorld:
-            'Giả sử bạn có dữ liệu 2 cột để định giá nhà: **Cột 1 là Diện tích** (`50` đến `150` $m^2$) và **Cột 2 là Số phòng ngủ** (`1` đến `4`). Nếu tính trực tiếp khoảng cách giữa hai căn nhà, con số `150` của diện tích sẽ đè bẹp hoàn toàn sự chênh lệch `1–2` phòng ngủ chỉ vì đơn vị đo lớn hơn!\n\nDo đó cần làm 2 việc: **(1) Quy mọi cột về cùng thước đo** (chuẩn hóa Z-score) và **(2) Chọn thước đo độ dài** (toán học gọi là **Chuẩn — Norm**) để đo hai điểm cách nhau bao xa.',
+            'Nhìn vào bảng dữ liệu thật `data/real_estate.csv` ở trên: cột **`mrt_distance_m`** (khoảng cách ra ga tàu) dao động từ `23.4 m` tới `6488.0 m`, còn cột **`stores`** (số cửa hàng tiện lợi) chỉ chạy từ `0` tới `10`!\n\nNếu bạn đo khoảng cách giữa hai căn nhà mà để nguyên số thô, độ chênh vài trăm mét ra ga tàu sẽ **nuốt chửng hoàn toàn** sự khác biệt `1–2` cửa hàng tiện lợi chỉ vì đơn vị mét có con số to hơn. Vì vậy ta phải **(1) Đưa mọi cột về cùng thước đo** bằng Z-score và **(2) Chọn thước đo độ dài (Chuẩn — Norm)** để so sánh các căn nhà công bằng.',
           workedExample:
-            String.raw`Cho cột Diện tích của 3 căn nhà: ` + '`[50, 70, 90]`' + String.raw`.
+            String.raw`Lấy đúng cột ` + '`age_years`' + String.raw` (tuổi nhà) của **3 căn đầu tiên trong ` + '`real_estate.csv`' + String.raw`**: ` + '`[32.0, 19.5, 13.3]`' + String.raw`.
 
-- **Bước 1 — Tìm mức trung bình ($\mu$)**: $(50 + 70 + 90) / 3 = 70$.
-- **Bước 2 — Độ lệch so với trung bình**: ` + '`50 - 70 = -20`' + String.raw`, ` + '`70 - 70 = 0`' + String.raw`, ` + '`90 - 70 = +20`' + String.raw`.
-- **Bước 3 — Độ phân tán chuẩn ($\sigma$)**: tính căn trung bình bình phương độ lệch $= \sqrt{\frac{(-20)^2 + 0^2 + 20^2}{3}} = \sqrt{\frac{800}{3}} \approx 16.33$.
-- **Bước 4 — Chia lấy Z-score**: ` + '`[-20/16.33, 0, +20/16.33] = [-1.22, 0.0, +1.22]`' + String.raw`.
-Bây giờ mọi cột đều xoay quanh ` + '`0`' + String.raw` và có độ tản mát ` + '`1`' + String.raw`, không còn lệ thuộc đơn vị $m^2$ hay số phòng!
+- **Bước 1 — Trung bình ($\mu$)**: $(32.0 + 19.5 + 13.3) / 3 = 21.6$.
+- **Bước 2 — Độ lệch khỏi trung bình**: ` + '`[32.0 - 21.6, 19.5 - 21.6, 13.3 - 21.6] = [+10.4, -2.1, -8.3]`' + String.raw`.
+- **Bước 3 — Độ phân tán chuẩn ($\sigma$)**: $\sqrt{\frac{10.4^2 + (-2.1)^2 + (-8.3)^2}{3}} = \sqrt{\frac{181.46}{3}} \approx 7.777$.
+- **Bước 4 — Chia lấy Z-score**: ` + '`[+10.4 / 7.777, -2.1 / 7.777, -8.3 / 7.777] = [+1.337, -0.270, -1.067]`' + String.raw`.
 
-Tương tự, với vector sai lệch ` + '`e = [3, -4]`' + String.raw`, ta có 3 cách đo độ dài:
-- **Đường chim bay ($L_2$)**: $\sqrt{3^2 + (-4)^2} = \sqrt{25} = 5$.
-- **Đi theo ô phố bàn cờ ($L_1$)**: $|3| + |-4| = 7$.
-- **Sai số tệ nhất ở một chiều ($L_\infty$)**: $\max(|3|, |-4|) = 4$.`,
+Khi áp dụng công thức đó trên cả **414 căn nhà thật**, hai căn đầu có vector Z-score ` + '`z_0 = [1.2556, -0.7925, 2.0074]`' + String.raw` và ` + '`z_1 = [0.1571, -0.6166, 1.6675]`' + String.raw`, hiệu ` + '`diff = z_0 - z_1 = [1.0985, -0.1759, 0.3399]`' + String.raw`:
+- **Đường chim bay ($L_2$)**: $\sqrt{1.0985^2 + (-0.1759)^2 + 0.3399^2} \approx 1.163$.
+- **Đi theo trục tọa độ ($L_1$)**: $|1.0985| + |-0.1759| + |0.3399| \approx 1.614$.
+- **Chênh lệch lớn nhất trên một cột ($L_\infty$)**: $\max(|1.0985|, |-0.1759|, |0.3399|) \approx 1.099$.`,
           workedExampleCode: `import numpy as np
+import pandas as pd
 
-# 1. Tính từng bước Z-score cho cột diện tích
-areas = np.array([50.0, 70.0, 90.0])
-mu = areas.mean()
-diffs = areas - mu
-sigma = np.sqrt(np.mean(diffs ** 2))
-z = diffs / sigma
-print(f"mu = {mu}, sigma = {sigma:.2f}, z = {np.round(z, 2)}")
+df = pd.read_csv('data/real_estate.csv')
+print("3 căn đầu từ data/real_estate.csv:")
+print(df[['age_years', 'mrt_distance_m', 'stores', 'price_10k_ntd_per_ping']].head(3))
 
-# 2. Ba cách đo độ dài vector sai lệch e = [3, -4]
-e = np.array([3.0, -4.0])
-print("L2 =", np.linalg.norm(e, ord=2))
-print("L1 =", np.linalg.norm(e, ord=1))
-print("L_inf =", np.linalg.norm(e, ord=np.inf))`,
-          codeBridge: {
-            title: 'Từ vòng lặp Python sang chuẩn hóa cột & khoảng cách bằng NumPy',
-            pythonLoop: `import math
-# Chuẩn hóa 1 list các số
-mu = sum(col) / len(col)
-var = sum((x - mu) ** 2 for x in col) / len(col)
-sd = math.sqrt(var) if var > 0 else 1.0
-z = [(x - mu) / sd for x in col]
+# 1. Tính Z-score cho age_years của 3 căn đầu
+age3 = df['age_years'].iloc[:3].to_numpy(dtype=float)
+z3 = (age3 - age3.mean()) / age3.std()
+print("\\nZ-score 3 căn đầu:", np.round(z3, 3))
 
-# Khoảng cách từng cặp giữa danh sách A và B
-dists = []
-for a in A:
-    row = []
-    for b in B:
-        d2 = sum((ai - bi) ** 2 for ai, bi in zip(a, b))
-        row.append(d2)
-    dists.append(row)`,
-            numpyWay: `import numpy as np
-# Chuẩn hóa cả bảng X (n dòng, d cột) một lần
-mu = X.mean(axis=0)        # Trung bình dọc theo từng cột
-sd = X.std(axis=0)
-sd = np.where(sd == 0, 1.0, sd)
-Z = (X - mu) / sd
-
-# Ghép mọi cặp (a_i, b_j) không cần vòng lặp
-diff = A[:, None, :] - B[None, :, :]
-dists = np.sum(diff ** 2, axis=2)`,
-            explanation:
-              'Trong NumPy, `axis=0` nghĩa là **"tính dọc xuống theo từng cột"**. Còn `A[:, None, :] - B[None, :, :]` tự động nhân bản các trục kích thước `1` (gọi là **Broadcasting**) để trừ mọi điểm trong `A` cho mọi điểm trong `B` cùng một lúc, thay thế gọn 2 vòng lặp lồng nhau.',
-          },
+# 2. Chuẩn hóa 3 cột đặc trưng của toàn bộ 414 căn và đo khoảng cách căn 0 vs căn 1
+X = df[['age_years', 'mrt_distance_m', 'stores']].to_numpy(dtype=float)
+Z = (X - X.mean(axis=0)) / X.std(axis=0)
+diff = Z[0] - Z[1]
+print(f"L2 = {np.linalg.norm(diff, 2):.3f}, L1 = {np.linalg.norm(diff, 1):.3f}, Linf = {np.linalg.norm(diff, np.inf):.3f}")`,
           body: String.raw`Trong học có giám sát, mỗi quan sát được biểu diễn dưới dạng vector cột $x_i \in \mathbb{R}^d$, ghép theo từng hàng thành ma trận thiết kế $X \in \mathbb{R}^{n \times d}$, cùng vector nhãn mục tiêu $y \in \mathbb{R}^n$.
 
 Để đo độ lớn sai số hoặc ràng buộc độ phức tạp của tham số $w \in \mathbb{R}^d$, ta sử dụng chuẩn $\ell_p$:
@@ -141,7 +112,7 @@ dists = np.sum(diff ** 2, axis=2)`,
             {
               symbol: '$X \\in \\mathbb{R}^{n \\times d}$',
               readAs: 'Ma trận thiết kế $n$ dòng, $d$ cột',
-              meaning: 'Bảng dữ liệu gồm $n$ mẫu (hàng), mỗi mẫu có $d$ đặc trưng (cột).',
+              meaning: 'Bảng dữ liệu gồm $n$ mẫu (414 căn nhà), mỗi mẫu có $d$ đặc trưng (tuổi nhà, khoảng cách MRT, số cửa hàng).',
             },
             {
               symbol: '$\\|x\\|_p$',
@@ -157,43 +128,30 @@ dists = np.sum(diff ** 2, axis=2)`,
         {
           heading: '2. Tích vô hướng (Nhân cặp rồi cộng) & Phép chiếu',
           realWorld:
-            'Làm thế nào một mô hình tuyến tính đoán ra giá nhà? Rất đơn giản: nó giữ một danh sách **đơn giá trọng số** `w = [5, 10]` (ví dụ `5` chục triệu/$m^2$, `10` chục triệu/phòng) và cộng một giá nền cố định `b = 10`.\n\nVới mỗi căn nhà, máy tính chỉ làm động tác **nhân từng đặc trưng với đơn giá tương ứng rồi cộng dồn lại**, sau đó cộng thêm `b`. Phép tính "nhân cặp đôi rồi cộng dồn" đó chính là **Tích vô hướng (Dot Product)**!',
+            'Sau khi chuẩn hóa Z-score 3 cột của `data/real_estate.csv`, mô hình tuyến tính định giá một căn nhà bằng cách giữ một bộ **trọng số tác động** `w = [-3.0, -7.0, 4.0]` (tuổi càng cao giảm giá `-3.0`, càng xa ga MRT giảm mạnh `-7.0`, càng nhiều cửa hàng tiện lợi tăng giá `+4.0`) cộng với mức giá trung bình nền `b = 38.0`.\n\nVới mỗi căn nhà, máy tính nhân từng đặc trưng đã chuẩn hóa với trọng số tương ứng rồi cộng dồn lại (`Z[i] @ w + b`). Động tác "nhân từng cặp cột rồi cộng" đó chính là **Tích vô hướng (Dot Product)**!',
           workedExample:
-            String.raw`Cho bảng 2 căn nhà ` + '`X = [[80, 2], [50, 1]]`' + String.raw`, trọng số ` + '`w = [5, 10]`' + String.raw` và ` + '`b = 10`' + String.raw`:
+            String.raw`Thử đoán giá cho **2 căn đầu tiên trong ` + '`real_estate.csv`' + String.raw`** (đã chuẩn hóa Z-score) với ` + '`w = [-3.0, -7.0, 4.0]`' + String.raw` và ` + '`b = 38.0`' + String.raw`:
 
-- **Căn 1** ` + '`[80, 2]`' + String.raw`: $80 \times 5 + 2 \times 10 + 10 = 400 + 20 + 10 = 430$.
-- **Căn 2** ` + '`[50, 1]`' + String.raw`: $50 \times 5 + 1 \times 10 + 10 = 250 + 10 + 10 = 270$.
+- **Căn 0** (` + '`z_0 = [1.2556, -0.7925, 2.0074]`' + String.raw`, giá thật ` + '`y_0 = 37.9`' + String.raw`):
+  $\hat{y}_0 = 1.2556\cdot(-3) + (-0.7925)\cdot(-7) + 2.0074\cdot 4 + 38.0 = -3.767 + 5.548 + 8.030 + 38.0 \approx 47.81$.
+- **Căn 1** (` + '`z_1 = [0.1571, -0.6166, 1.6675]`' + String.raw`, giá thật ` + '`y_1 = 42.2`' + String.raw`):
+  $\hat{y}_1 = 0.1571\cdot(-3) + (-0.6166)\cdot(-7) + 1.6675\cdot 4 + 38.0 = -0.471 + 4.316 + 6.670 + 38.0 \approx 48.52$.
 
-Kết quả cho cả 2 căn là ` + '`[430, 270]`' + String.raw`. Về mặt hình học, nếu coi trọng số $w$ như một mũi tên định hướng trên bản đồ, tích vô hướng $w^\top x$ đo xem dữ liệu $x$ **đồng hướng với $w$ nhiều tới mức nào** (chiếu vuông góc $x$ lên trục $w$).`,
+Trong Python/NumPy, chỉ một biểu thức ` + '`Z @ w + b`' + String.raw` sẽ tính đồng thời tích vô hướng cho toàn bộ ` + '`414`' + String.raw` căn nhà mà không cần bất kỳ vòng lặp ` + '`for`' + String.raw` nào.`,
           workedExampleCode: `import numpy as np
+import pandas as pd
 
-X = np.array([
-    [80, 2],   # Căn 1: 80m2, 2 phòng
-    [50, 1],   # Căn 2: 50m2, 1 phòng
-])
-w = np.array([5, 10])
-b = 10
+df = pd.read_csv('data/real_estate.csv')
+X = df[['age_years', 'mrt_distance_m', 'stores']].to_numpy(dtype=float)
+y = df['price_10k_ntd_per_ping'].to_numpy(dtype=float)
+Z = (X - X.mean(axis=0)) / X.std(axis=0)
 
-# Nhân từng cặp cột rồi cộng + giá nền b
-y_hat = X @ w + b
-print("Giá dự đoán (chục triệu):", y_hat)
+w = np.array([-3.0, -7.0, 4.0])
+b = 38.0
+y_hat = Z @ w + b   # Tính tích vô hướng cho cả 414 căn cùng lúc
 
-# Kiểm chứng tay căn 1:
-print("Căn 1 bằng tay:", 80*5 + 2*10 + 10)`,
-          codeBridge: {
-            title: 'Tính dự đoán cho hàng nghìn dòng cùng lúc bằng toán tử @',
-            pythonLoop: `# Cách viết vòng lặp Python thông thường
-preds = []
-for row in X:
-    dot = 0.0
-    for xj, wj in zip(row, w):
-        dot += xj * wj
-    preds.append(dot + b)`,
-            numpyWay: `# Toán tử @ làm phép nhân ma trận–vector cho mọi dòng cùng lúc
-preds = X @ w + b`,
-            explanation:
-              'Ký hiệu `@` trong Python 3 / NumPy là viết tắt của phép nhân ma trận. Khi `X` có kích thước `(n, d)` và `w` có kích thước `(d,)`, `X @ w` tự động chạy tích vô hướng cho từng hàng và trả ra mảng `(n,)`, rồi `+ b` tự động cộng số `b` vào từng phần tử.',
-          },
+for i in range(5):
+    print(f"Căn {i}: Giá thật = {y[i]:5.1f} | Dự đoán = {y_hat[i]:5.2f} | Sai lệch = {y_hat[i] - y[i]:+6.2f}")`,
           body: String.raw`Mô hình tuyến tính cơ bản thực chất tính tích vô hướng $x^\top w + b$:
 - Về đại số, đây là tổ hợp tuyến tính của các đặc trưng.
 - Về hình học, $(w^\top x) / \|w\|_2$ là độ dài hình chiếu có dấu của vector dữ liệu $x$ lên phương của vector pháp tuyến $w$. Siêu phẳng quyết định $\{x : w^\top x + b = 0\}$ luôn vuông góc với vector $w$.`,
@@ -204,49 +162,47 @@ preds = X @ w + b`,
         {
           heading: '3. Gradient: Làm sao máy tính biết đường giảm sai số?',
           realWorld:
-            'Giả sử ban đầu máy tính đặt bừa trọng số `w = 1` nên đoán sai giá nhà khá nhiều. Làm sao nó tự biết phải **tăng `w` lên** (thành `2, 2.5`) hay **giảm `w` xuống** để bớt sai?\n\nHãy tưởng tượng bạn đang bịt mắt đứng trên một thung lũng sương mù, trong đó độ cao mặt đất chính là **mức độ đoán sai (Loss)**. Để đi xuống đáy thung lũng, bạn nhích chân thăm dò xem mặt đất **đang dốc lên hay dốc xuống** theo từng hướng. Cặp con số chỉ hướng dốc lên tại điểm đang đứng chính là **Gradient ($\\nabla_w$)** — chỉ cần bước ngược chiều với độ dốc (`w = w - lr * grad`) là sai số giảm xuống!',
+            'Nếu ban đầu máy tính chưa biết giá trị hợp lý của `w` (ví dụ đặt toàn số `0`: `w = [0, 0, 0]`, `b = 0.0`), mức sai số bình phương trung bình trên `414` căn nhà thật sẽ rất lớn (`MSE = 1627.18`). Làm sao máy tính tự biết phải tăng hay giảm từng trọng số `w[0], w[1], w[2]`?\n\nHãy tưởng tượng bạn đứng trên một thung lũng sương mù, độ cao là **sai số MSE**. Độ dốc của mặt đất theo từng hướng chính là **Gradient ($\nabla_w$)**. Máy tính chỉ cần bước ngược chiều độ dốc (`w = w - lr * grad`) là sai số giảm xuống đều đặn sau mỗi vòng lặp!',
           workedExample:
-            String.raw`Thử với đúng 2 căn nhà nhỏ (1 đặc trưng): Căn 1 ` + '`(x1=1, giá thật y1=3)`' + String.raw`, Căn 2 ` + '`(x2=2, giá thật y2=5)`' + String.raw`.
-Thử đặt trọng số ban đầu ` + '`w = 1.0`' + String.raw`:
+            String.raw`Thử tính Gradient bằng tay trên **2 căn đầu tiên của ` + '`real_estate.csv`' + String.raw`** tại ` + '`w = [0, 0, 0]`' + String.raw`, ` + '`b = 38.0`' + String.raw` (giá thật ` + '`y = [37.9, 42.2]`' + String.raw`):
 
-- **Bước 1 (Đoán thử)**: $\hat{y}_1 = 1\cdot 1 = 1$, $\hat{y}_2 = 2\cdot 1 = 2$.
-- **Bước 2 (Đo sai lệch — Phần dư)**: $e_1 = 1 - 3 = -2$, $e_2 = 2 - 5 = -3$.
-- **Bước 3 (Bình phương trung bình MSE)**: $L(1) = \frac{(-2)^2 + (-3)^2}{2} = \frac{4 + 9}{2} = 6.5$.
-- **Bước 4 (Tính độ dốc Gradient $\frac{2}{n} \sum x_i e_i$)**:
-  $\text{grad} = \frac{2}{2}\big(1\cdot(-2) + 2\cdot(-3)\big) = 1\cdot(-2 - 6) = -8$.
+- **Bước 1 (Đoán thử & Phần dư)**: $\hat{y}_0 = \hat{y}_1 = 38.0 \implies e_0 = 38.0 - 37.9 = +0.1$, $e_1 = 38.0 - 42.2 = -4.2$.
+- **Bước 2 (MSE của 2 căn)**: $L = \frac{0.1^2 + (-4.2)^2}{2} = \frac{0.01 + 17.64}{2} = 8.825$.
+- **Bước 3 (Gradient từng đặc trưng $\frac{2}{2}(z_{0,j}e_0 + z_{1,j}e_1)$)**:
+  - Tuổi nhà ($j=0$): $1.2556\cdot(0.1) + 0.1571\cdot(-4.2) \approx -0.534$.
+  - Khoảng cách MRT ($j=1$): $-0.7925\cdot(0.1) + (-0.6166)\cdot(-4.2) \approx +2.511$.
+  - Số cửa hàng ($j=2$): $2.0074\cdot(0.1) + 1.6675\cdot(-4.2) \approx -6.803$.
 
-**Kiểm tra bằng trực giác**: Dấu âm ` + '`-8`' + String.raw` báo hiệu *"nếu tăng ` + '`w`' + String.raw` lên, sai số sẽ giảm rất nhanh!"*. Quả thật, thử tăng ` + '`w`' + String.raw` thành ` + '`1.1`' + String.raw`: sai số giảm từ ` + '`6.5`' + String.raw` xuống ` + '`5.74`' + String.raw`! (Muốn tự kiểm tra xem mình tính đạo hàm đúng chưa trong code, luôn dùng công thức nhích nhẹ $h = 0.0001$: ` + '`(L(w + h) - L(w - h)) / (2 * h)`' + String.raw` rồi so sánh).`,
+Trong Python bên cạnh, ta vừa đối chiếu Gradient trên 2 căn này với công thức kiểm tra số ` + '`(L(w+h) - L(w-h)) / (2*h)`' + String.raw`, vừa chạy ` + '`10`' + String.raw` bước Gradient Descent trên **toàn bộ 414 căn nhà thật** để thấy MSE tụt thẳng từ ` + '`1627.18`' + String.raw` xuống ` + '`101.81`' + String.raw`!`,
           workedExampleCode: `import numpy as np
+import pandas as pd
 
-x = np.array([1.0, 2.0])
-y = np.array([3.0, 5.0])
-w = 1.0
+df = pd.read_csv('data/real_estate.csv')
+X = df[['age_years', 'mrt_distance_m', 'stores']].to_numpy(dtype=float)
+y = df['price_10k_ntd_per_ping'].to_numpy(dtype=float)
+Z = (X - X.mean(axis=0)) / X.std(axis=0)
 
-def mse(w_val):
-    return np.mean((x * w_val - y) ** 2)
-
-err = x * w - y
-grad = (2.0 / len(y)) * np.sum(x * err)
+# 1. Kiểm chứng tính tay 2 căn đầu bằng công thức giải tích & sai phân số
+Z2, y2 = Z[:2], y[:2]
+w0, b0 = np.zeros(3), 38.0
+err2 = (Z2 @ w0 + b0) - y2
+grad_w2 = (2.0 / len(y2)) * (Z2.T @ err2)
 h = 1e-4
-num_grad = (mse(w + h) - mse(w - h)) / (2 * h)
+num_grad = np.array([
+    (np.mean((Z2 @ (w0 + e) + b0 - y2) ** 2) - np.mean((Z2 @ (w0 - e) + b0 - y2) ** 2)) / (2 * h)
+    for e in np.eye(3) * h
+])
+print("MSE 2 căn đầu:", round(float(np.mean(err2 ** 2)), 3))
+print("Gradient w giải tích:", np.round(grad_w2, 3), "| Sai phân số:", np.round(num_grad, 3))
 
-print(f"MSE tại w=1.0: {mse(w):.2f}")
-print(f"Gradient = {grad:.4f}, Kiểm tra số = {num_grad:.4f}")
-print(f"MSE nếu tăng w lên 1.1: {mse(1.1):.2f} (đã giảm!)")`,
-          codeBridge: {
-            title: 'Tính độ dốc MSE bằng vòng lặp vs công thức ma trận X.T @ err',
-            pythonLoop: `n = len(y)
-grad = [0.0 for _ in w]
-for i in range(n):
-    y_hat = sum(X[i][j] * w[j] for j in range(len(w)))
-    err_i = y_hat - y[i]
-    for j in range(len(w)):
-        grad[j] += (2.0 / n) * X[i][j] * err_i`,
-            numpyWay: `err = X @ w - y          # Sai số của cả n mẫu, shape (n,)
-grad = (2.0 / len(y)) * (X.T @ err)  # Shape (d,)`,
-            explanation:
-              'Tại sao phải đảo bảng `X` thành `X.T`? Bởi vì `err` đang chứa $n$ sai số của $n$ căn nhà. Ta muốn cộng gộp đóng góp sai số cho **từng trong $d$ đặc trưng**, nên phải xoay ma trận từ `(n, d)` sang `(d, n)` rồi nhân `@ err` có shape `(n,)` để ra đúng kết quả `(d,)` khớp với số phần tử của `w`!',
-          },
+# 2. Chạy 10 bước Gradient Descent trên TOÀN BỘ 414 căn nhà thật
+w, b, lr = np.zeros(3), 0.0, 0.1
+print("\\nMSE ban đầu (414 căn):", round(float(np.mean((Z @ w + b - y) ** 2)), 2))
+for _ in range(10):
+    err = (Z @ w + b) - y
+    w -= lr * (2.0 / len(y)) * (Z.T @ err)
+    b -= lr * (2.0 / len(y)) * np.sum(err)
+print("MSE sau 10 bước:", round(float(np.mean((Z @ w + b - y) ** 2)), 2), "| w =", np.round(w, 3))`,
           body: String.raw`Thay vì lấy đạo hàm riêng từng phần tử $w_1, \dots, w_d$ rồi ghép lại, ta đạo hàm trực tiếp trên không gian vector $\mathbb{R}^d$ (theo quy ước mẫu số — cùng kích thước với tham số $w$).
 
 Ba đồng nhất thức cốt lõi dùng xuyên suốt các mô hình học máy:
@@ -391,6 +347,95 @@ def _numeric_grad(X, y, w, eps=1e-6):
         np.asarray(mse_gradient(_Xg, _yg, _wg)).shape == (3,),
         'Vector gradient phải thuộc R^d.'
     )),
+)
+`,
+        },
+        {
+          id: 'm1-u1-housing-pipeline',
+          title: 'Thực hành trọn quy trình: Xử lý dữ liệu & Huấn luyện dự đoán giá nhà (UCI Real Estate)',
+          prompt:
+            'Áp dụng toàn bộ 3 phần vừa học lên bảng `df` (đã nạp sẵn tại `df_housing = pd.read_csv(\'data/real_estate.csv\')`). Cài đặt `train_housing_gd(df, lr=0.1, steps=200)`: (1) tách `X` gồm 3 cột `[\'age_years\', \'mrt_distance_m\', \'stores\']` và `y` là `\'price_10k_ntd_per_ping\'` (không sửa `df` gốc); (2) chia 80% đầu (`split = int(0.8 * len(df))`) làm tập train, phần còn lại làm validation; (3) tính `mu, sd` (`ddof=0`, `sd == 0` thay bằng `1.0`) **chỉ trên train** rồi chuẩn hóa Z-score cho cả train và val; (4) khởi tạo `w = np.zeros(3)`, `b = 0.0`, chạy `steps` bước Gradient Descent cập nhật đồng thời `w, b`; (5) trả về dict `{\'w\': w, \'b\': float(b), \'train_mse\': ..., \'val_mse\': ...}`.',
+          hint:
+            'Dùng `split = int(0.8 * len(X))`; chuẩn hóa `Z_tr = (X_tr - mu) / sd`, `Z_va = (X_va - mu) / sd`. Trong mỗi bước lặp: `err = Z_tr @ w + b - y_tr`, `w = w - lr * (2.0 / len(y_tr)) * (Z_tr.T @ err)`, `b = b - lr * (2.0 / len(y_tr)) * np.sum(err)`.',
+          setup:
+            COMMON_SETUP +
+            String.raw`
+import pandas as pd
+df_housing = pd.read_csv('data/real_estate.csv')
+_df_orig = df_housing.copy(deep=True)
+_split_idx = int(0.8 * len(df_housing))
+_y_tr_mean = df_housing['price_10k_ntd_per_ping'].iloc[:_split_idx].mean()
+_base_val_mse = float(np.mean((df_housing['price_10k_ntd_per_ping'].iloc[_split_idx:] - _y_tr_mean) ** 2))
+`,
+          starter: String.raw`def train_housing_gd(df, lr=0.1, steps=200):
+    # X: ['age_years', 'mrt_distance_m', 'stores']
+    # y: 'price_10k_ntd_per_ping'
+    raise NotImplementedError
+`,
+          solution: String.raw`def train_housing_gd(df, lr=0.1, steps=200):
+    cols = ['age_years', 'mrt_distance_m', 'stores']
+    X = df[cols].to_numpy(dtype=float)
+    y = df['price_10k_ntd_per_ping'].to_numpy(dtype=float)
+
+    split = int(0.8 * len(X))
+    X_tr, X_va = X[:split], X[split:]
+    y_tr, y_va = y[:split], y[split:]
+
+    mu = X_tr.mean(axis=0)
+    sd = np.where(X_tr.std(axis=0) == 0, 1.0, X_tr.std(axis=0))
+    Z_tr = (X_tr - mu) / sd
+    Z_va = (X_va - mu) / sd
+
+    w = np.zeros(X.shape[1], dtype=float)
+    b = 0.0
+    n_tr = len(y_tr)
+    for _ in range(steps):
+        err = (Z_tr @ w + b) - y_tr
+        grad_w = (2.0 / n_tr) * (Z_tr.T @ err)
+        grad_b = (2.0 / n_tr) * float(np.sum(err))
+        w = w - lr * grad_w
+        b = b - lr * grad_b
+
+    train_mse = float(np.mean(((Z_tr @ w + b) - y_tr) ** 2))
+    val_mse = float(np.mean(((Z_va @ w + b) - y_va) ** 2))
+    return {'w': w, 'b': float(b), 'train_mse': train_mse, 'val_mse': val_mse}
+`,
+          test: String.raw`_cache = {}
+def _run_base():
+    if 'base' not in _cache:
+        _cache['base'] = train_housing_gd(df_housing, lr=0.1, steps=200)
+    return _cache['base']
+
+def _run_leak():
+    if 'leak' not in _cache:
+        _df_leak = _df_orig.copy(deep=True)
+        _df_leak.loc[_split_idx:, 'age_years'] = _df_leak.loc[_split_idx:, 'age_years'] + 1000.0
+        _df_leak.loc[_split_idx:, 'mrt_distance_m'] = _df_leak.loc[_split_idx:, 'mrt_distance_m'] + 100000.0
+        _cache['leak'] = train_housing_gd(_df_leak, lr=0.1, steps=200)
+    return _cache['leak']
+
+_report('m1-u1-housing-pipeline',
+    _check('Trả về dict hợp lệ gồm w (shape 3), b, train_mse, val_mse', lambda: (lambda r: (
+        isinstance(r, dict)
+        and all(k in r for k in ('w', 'b', 'train_mse', 'val_mse'))
+        and np.asarray(r['w'], dtype=float).shape == (3,)
+        and np.isfinite(r['b'])
+        and np.isfinite(r['train_mse'])
+        and np.isfinite(r['val_mse']),
+        f"train_mse={r.get('train_mse', 0):.2f}, val_mse={r.get('val_mse', 0):.2f}" if isinstance(r, dict) and 'train_mse' in r and 'val_mse' in r else 'Thiếu khóa kết quả.'
+    ))(_run_base())),
+    _check('Chuẩn hóa Z-score chỉ fit trên tập train (chống rò rỉ dữ liệu val)', lambda: (lambda r, rl: (
+        np.allclose(r['w'], rl['w'], atol=1e-9) and np.isclose(r['b'], rl['b'], atol=1e-9),
+        'Biến đổi tập validation không được làm thay đổi w và b đã học.'
+    ))(_run_base(), _run_leak())),
+    _check('MSE trên tập train & validation giảm mạnh hơn baseline đoán trung bình', lambda: (lambda r: (
+        r['train_mse'] < 95.0 and r['val_mse'] < min(70.0, _base_val_mse * 0.5),
+        f"Baseline val_mse={_base_val_mse:.2f} -> Mô hình val_mse={r['val_mse']:.2f}"
+    ))(_run_base())),
+    _check('Trọng số hợp lý với thực tế nhà đất và không sửa df_housing gốc', lambda: (lambda r: (
+        r['w'][1] < 0 and r['w'][2] > 0 and abs(r['b'] - 37.9) < 1.0 and df_housing.equals(_df_orig),
+        f"w={np.round(r['w'], 2)}, b={r['b']:.2f}"
+    ))(_run_base())),
 )
 `,
         },
