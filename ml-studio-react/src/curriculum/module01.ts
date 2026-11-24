@@ -73,7 +73,7 @@ export const MODULE_01: GradModule = {
           realWorld:
             'Giả sử bạn có dữ liệu 2 cột để định giá nhà: **Cột 1 là Diện tích** (`50` đến `150` $m^2$) và **Cột 2 là Số phòng ngủ** (`1` đến `4`). Nếu tính trực tiếp khoảng cách giữa hai căn nhà, con số `150` của diện tích sẽ đè bẹp hoàn toàn sự chênh lệch `1–2` phòng ngủ chỉ vì đơn vị đo lớn hơn!\n\nDo đó cần làm 2 việc: **(1) Quy mọi cột về cùng thước đo** (chuẩn hóa Z-score) và **(2) Chọn thước đo độ dài** (toán học gọi là **Chuẩn — Norm**) để đo hai điểm cách nhau bao xa.',
           workedExample:
-            String.raw`Cho cột Diện tích của 3 căn nhà: ` + '` + \'`' + String.raw`[50, 70, 90]` + '`\' + String.raw`' + String.raw`.
+            String.raw`Cho cột Diện tích của 3 căn nhà: ` + '`[50, 70, 90]`' + String.raw`.
 
 - **Bước 1 — Tìm mức trung bình ($\mu$)**: $(50 + 70 + 90) / 3 = 70$.
 - **Bước 2 — Độ lệch so với trung bình**: ` + '`50 - 70 = -20`' + String.raw`, ` + '`70 - 70 = 0`' + String.raw`, ` + '`90 - 70 = +20`' + String.raw`.
@@ -85,6 +85,21 @@ Tương tự, với vector sai lệch ` + '`e = [3, -4]`' + String.raw`, ta có 
 - **Đường chim bay ($L_2$)**: $\sqrt{3^2 + (-4)^2} = \sqrt{25} = 5$.
 - **Đi theo ô phố bàn cờ ($L_1$)**: $|3| + |-4| = 7$.
 - **Sai số tệ nhất ở một chiều ($L_\infty$)**: $\max(|3|, |-4|) = 4$.`,
+          workedExampleCode: `import numpy as np
+
+# 1. Tính từng bước Z-score cho cột diện tích
+areas = np.array([50.0, 70.0, 90.0])
+mu = areas.mean()
+diffs = areas - mu
+sigma = np.sqrt(np.mean(diffs ** 2))
+z = diffs / sigma
+print(f"mu = {mu}, sigma = {sigma:.2f}, z = {np.round(z, 2)}")
+
+# 2. Ba cách đo độ dài vector sai lệch e = [3, -4]
+e = np.array([3.0, -4.0])
+print("L2 =", np.linalg.norm(e, ord=2))
+print("L1 =", np.linalg.norm(e, ord=1))
+print("L_inf =", np.linalg.norm(e, ord=np.inf))`,
           codeBridge: {
             title: 'Từ vòng lặp Python sang chuẩn hóa cột & khoảng cách bằng NumPy',
             pythonLoop: `import math
@@ -150,6 +165,21 @@ dists = np.sum(diff ** 2, axis=2)`,
 - **Căn 2** ` + '`[50, 1]`' + String.raw`: $50 \times 5 + 1 \times 10 + 10 = 250 + 10 + 10 = 270$.
 
 Kết quả cho cả 2 căn là ` + '`[430, 270]`' + String.raw`. Về mặt hình học, nếu coi trọng số $w$ như một mũi tên định hướng trên bản đồ, tích vô hướng $w^\top x$ đo xem dữ liệu $x$ **đồng hướng với $w$ nhiều tới mức nào** (chiếu vuông góc $x$ lên trục $w$).`,
+          workedExampleCode: `import numpy as np
+
+X = np.array([
+    [80, 2],   # Căn 1: 80m2, 2 phòng
+    [50, 1],   # Căn 2: 50m2, 1 phòng
+])
+w = np.array([5, 10])
+b = 10
+
+# Nhân từng cặp cột rồi cộng + giá nền b
+y_hat = X @ w + b
+print("Giá dự đoán (chục triệu):", y_hat)
+
+# Kiểm chứng tay căn 1:
+print("Căn 1 bằng tay:", 80*5 + 2*10 + 10)`,
           codeBridge: {
             title: 'Tính dự đoán cho hàng nghìn dòng cùng lúc bằng toán tử @',
             pythonLoop: `# Cách viết vòng lặp Python thông thường
@@ -186,6 +216,23 @@ Thử đặt trọng số ban đầu ` + '`w = 1.0`' + String.raw`:
   $\text{grad} = \frac{2}{2}\big(1\cdot(-2) + 2\cdot(-3)\big) = 1\cdot(-2 - 6) = -8$.
 
 **Kiểm tra bằng trực giác**: Dấu âm ` + '`-8`' + String.raw` báo hiệu *"nếu tăng ` + '`w`' + String.raw` lên, sai số sẽ giảm rất nhanh!"*. Quả thật, thử tăng ` + '`w`' + String.raw` thành ` + '`1.1`' + String.raw`: sai số giảm từ ` + '`6.5`' + String.raw` xuống ` + '`5.74`' + String.raw`! (Muốn tự kiểm tra xem mình tính đạo hàm đúng chưa trong code, luôn dùng công thức nhích nhẹ $h = 0.0001$: ` + '`(L(w + h) - L(w - h)) / (2 * h)`' + String.raw` rồi so sánh).`,
+          workedExampleCode: `import numpy as np
+
+x = np.array([1.0, 2.0])
+y = np.array([3.0, 5.0])
+w = 1.0
+
+def mse(w_val):
+    return np.mean((x * w_val - y) ** 2)
+
+err = x * w - y
+grad = (2.0 / len(y)) * np.sum(x * err)
+h = 1e-4
+num_grad = (mse(w + h) - mse(w - h)) / (2 * h)
+
+print(f"MSE tại w=1.0: {mse(w):.2f}")
+print(f"Gradient = {grad:.4f}, Kiểm tra số = {num_grad:.4f}")
+print(f"MSE nếu tăng w lên 1.1: {mse(1.1):.2f} (đã giảm!)")`,
           codeBridge: {
             title: 'Tính độ dốc MSE bằng vòng lặp vs công thức ma trận X.T @ err',
             pythonLoop: `n = len(y)
@@ -407,6 +454,18 @@ Thử so sánh giá trị tại 3 ứng viên:
 - Nếu $\theta = 0.90$: $L = 0.9^3 \cdot 0.1 = 0.0729$ ($\log L \approx -2.62$).
 
 Với dữ liệu số liên tục như chiều cao ` + '`[2.0, 4.0, 6.0]`' + String.raw` giả sử theo phân phối chuẩn hình chuông: nghiệm MLE cho ngay trung bình $\hat{\mu} = (2+4+6)/3 = 4.0$ và phương sai $\hat{\sigma}^2 = \frac{(-2)^2 + 0^2 + 2^2}{3} = \frac{8}{3} \approx 2.667$.`,
+          workedExampleCode: `import math
+
+# So sánh Likelihood cho 3 Ngửa, 1 Sấp ở các giá trị theta khác nhau
+for theta in [0.50, 0.75, 0.90]:
+    L = (theta ** 3) * (1.0 - theta)
+    print(f"theta={theta:.2f} -> L={L:.4f}, log(L)={math.log(L):.2f}")
+
+# Kiểm tra Gaussian MLE trên [2.0, 4.0, 6.0]
+x = [2.0, 4.0, 6.0]
+mu = sum(x) / len(x)
+var = sum((v - mu) ** 2 for v in x) / len(x)
+print(f"mu_hat = {mu}, var_hat = {var:.3f}")`,
           codeBridge: {
             title: 'Tính Log-Likelihood bằng vòng lặp Python vs NumPy',
             pythonLoop: `import math
@@ -441,6 +500,14 @@ ll = np.sum(-0.5 * np.log(2 * np.pi * var) - ((x - mu) ** 2) / (2 * var))`,
   - **MAP (thêm kinh nghiệm trước)**: $\frac{3 + 4 - 1}{3 + 4 + 4 - 2} = \frac{6}{9} = \mathbf{0.667}$ (kéo về mức an toàn!).
   - **Posterior Mean (kỳ vọng hậu nghiệm)**: $\frac{4 + 3}{4 + 4 + 3} = \frac{7}{11} \approx \mathbf{0.636}$.
 - Với **Shop B** (` + '`k=950`' + String.raw` tốt trong ` + '`n=1000`' + String.raw` lượt): $\text{MAP} = \frac{950 + 3}{1000 + 6} \approx \mathbf{0.947}$ (dữ liệu nhiều thì kinh nghiệm giả ban đầu hầu như không ảnh hưởng nữa!).`,
+          workedExampleCode: `def compare_mle_map(name, k, n, alpha=4, beta=4):
+    mle = k / n
+    map_est = (k + alpha - 1) / (n + alpha + beta - 2)
+    post_mean = (k + alpha) / (n + alpha + beta)
+    print(f"{name}: MLE={mle:.3f}, MAP={map_est:.3f}, PostMean={post_mean:.3f}")
+
+compare_mle_map("Shop A (ít mẫu)", k=3, n=3)
+compare_mle_map("Shop B (nhiều mẫu)", k=950, n=1000)`,
           codeBridge: {
             title: 'So sánh MLE, MAP và Posterior Mean trong Python',
             pythonLoop: `mle = k / n
@@ -473,6 +540,14 @@ Với dữ liệu Bernoulli có $k$ lần thành công trong $n$ phép thử và
 - Mô hình 1 dùng trọng số hiền hòa ` + '`w1 = [1.0, -1.0]`' + String.raw`: bình phương tổng trọng số $\|w_1\|_2^2 = 1^2 + (-1)^2 = 2$.
 - Mô hình 2 nhảy vọt phức tạp ` + '`w2 = [10.0, -10.0]`' + String.raw`: $\|w_2\|_2^2 = 100 + 100 = 200$.
 Với mức phạt tiên nghiệm $\lambda = 0.01$: Loss của mô hình 1 là $0.5 + 0.02 = \mathbf{0.52}$, còn mô hình 2 bị phạt thành $0.5 + 2.00 = \mathbf{2.50}$. Mô hình tự động ưu tiên trọng số gọn gàng hơn!`,
+          workedExampleCode: `import numpy as np
+
+mse = 0.5
+lam = 0.01
+for name, w in [("Hiền hòa", [1.0, -1.0]), ("Quá lớn", [10.0, -10.0])]:
+    w = np.array(w)
+    penalty = lam * np.sum(w ** 2)
+    print(f"{name}: ||w||^2={np.sum(w**2):.0f}, phạt={penalty:.2f}, tổng loss={mse + penalty:.2f}")`,
           body: String.raw`Xác suất cung cấp cơ sở lý thuyết chặt chẽ lý giải vì sao các hàm mất mát tiêu chuẩn có dạng như hiện nay:
 - **Gaussian Likelihood $\equiv$ MSE Loss**: Nếu $y_i = w^\top x_i + \varepsilon_i$ với $\varepsilon_i \stackrel{\text{i.i.d.}}{\sim} \mathcal{N}(0, \sigma^2)$, tối đa hóa $\log p(y \mid X, w)$ tương đương tối thiểu hóa $\sum_{i=1}^n (y_i - w^\top x_i)^2$.
 - **Gaussian Prior $\equiv$ Ridge ($L_2$)**: Nếu đặt thêm tiên nghiệm $w \sim \mathcal{N}(0, \tau^2 I)$, số hạng $-\log p(w) = \frac{1}{2\tau^2}\|w\|_2^2 + \text{const}$ chính xác là thành phần phạt Ridge với $\lambda = \frac{\sigma^2}{\tau^2}$!`,
@@ -604,6 +679,12 @@ _X1d = np.array([2.1, 2.5, 3.3, 1.9, 2.7, 3.0])
 - Sai số bình phương từng mẫu: ` + '`[0.04, 0.16, 0.04]`' + String.raw`.
 - **Empirical Risk $\hat{R}_n(h)$**: lấy trung bình $\frac{0.04 + 0.16 + 0.04}{3} = 0.08$.
 Mọi vòng lặp huấn luyện ` + '`fit`' + String.raw` trong ML thực chất đều chỉ tối thiểu hóa con số trung bình $\hat{R}_n(h)$ trên các mẫu đang nắm trong tay.`,
+          workedExampleCode: `import numpy as np
+
+errs = np.array([0.2, -0.4, 0.2])
+sq_errs = errs ** 2
+print("Bình phương từng mẫu:", sq_errs)
+print("Empirical Risk R_hat =", np.mean(sq_errs))`,
           body: String.raw`Mục tiêu tối thượng của học có giám sát là tìm giả thuyết $h \in \mathcal{H}$ cực tiểu hóa **Rủi ro kỳ vọng thật (True Risk)** trên phân phối dữ liệu chưa biết $P(X, Y)$. Vì $P(X, Y)$ không quan sát được, thuật toán học thay thế bằng cực tiểu hóa **Rủi ro thực nghiệm (Empirical Risk)** trên $n$ mẫu huấn luyện:`,
           math: String.raw`R(h) = \mathbb{E}_{(x, y)\sim P}[\ell(h(x), y)], \qquad \hat{h}_{\text{ERM}} = \arg\min_{h \in \mathcal{H}} \frac{1}{n} \sum_{i=1}^n \ell(h(x_i), y_i)`,
           intuition:
@@ -623,6 +704,19 @@ Mọi vòng lặp huấn luyện ` + '`fit`' + String.raw` trong ML thực chấ
 - **Bước 4 (Kiểm chứng đẳng thức tổng)**:
   - Tổng 3 mảnh: $\text{Bias}^2 + \text{Var} + \sigma^2 = 9.0 + 2.667 + 0.25 = \mathbf{11.917}$.
   - Tính sai số bình phương trực tiếp từng lần rồi trung bình + gió: $\frac{(11-10)^2 + (13-10)^2 + (15-10)^2}{3} + 0.25 = \frac{1 + 9 + 25}{3} + 0.25 = 11.667 + 0.25 = \mathbf{11.917}$! Khớp nhau chính xác tuyệt đối!`,
+          workedExampleCode: `import numpy as np
+
+f_true = 10.0
+noise_var = 0.25
+preds = np.array([11.0, 13.0, 15.0])  # 3 lần train khác nhau
+
+mean_f = np.mean(preds)
+bias_sq = (mean_f - f_true) ** 2
+variance = np.var(preds)
+
+print(f"Trung bình = {mean_f:.1f}, Bias^2 = {bias_sq:.3f}, Var = {variance:.3f}")
+print(f"Bias^2 + Var + noise = {bias_sq + variance + noise_var:.3f}")
+print(f"MSE tính trực tiếp   = {np.mean((preds - f_true) ** 2) + noise_var:.3f}")`,
           codeBridge: {
             title: 'Ước lượng Bias² và Variance từ ma trận M lần chạy',
             pythonLoop: `# preds là bảng M hàng (số lần train), N cột (số điểm test)
@@ -757,6 +851,14 @@ _noise_var = 0.04
 $$n \ge \frac{1}{2 \cdot 0.05^2} \ln\left(\frac{2 \times 100}{0.05}\right) = 200 \cdot \ln(4000) \approx 200 \times 8.294 \approx \mathbf{1{,}659\text{ mẫu}}$$
 
 **Điều thú vị**: Nếu thử gấp **10 lần** số cấu hình ($1{,}000$ thay vì $100$), số mẫu cần thiết chỉ tăng nhẹ từ ` + '`1,659`' + String.raw` lên ` + '`2,119`' + String.raw` (tăng theo $\ln |\mathcal{H}|$ rất chậm, chứ không nhân 10!). Nhưng nếu muốn giảm sai số xuống một nửa ($\epsilon = 0.025$), cần dữ liệu tăng **gấp 4 lần** (` + '`1 / eps^2`' + String.raw`)!`,
+          workedExampleCode: `import math
+
+def min_samples(num_models, eps=0.05, delta=0.05):
+    return math.ceil(math.log(2 * num_models / delta) / (2 * eps ** 2))
+
+print("H=100,   eps=0.05  -> n >=", min_samples(100, eps=0.05))
+print("H=1000,  eps=0.05  -> n >=", min_samples(1000, eps=0.05))
+print("H=100,   eps=0.025 -> n >=", min_samples(100, eps=0.025))`,
           body: String.raw`Với hàm mất mát $0\text{--}1$, cho bất kỳ giả thuyết cố định $h \in \mathcal{H}$, bất đẳng thức Hoeffding giới hạn xác suất sai lệch giữa rủi ro thật $R(h)$ và rủi ro thực nghiệm $\hat{R}_n(h)$ trên $n$ mẫu i.i.d. Áp dụng Union Bound qua toàn bộ $k = |\mathcal{H}|$ giả thuyết, với xác suất ít nhất $1 - \delta$ (khung Probably Approximately Correct — PAC), mọi $h \in \mathcal{H}$ đều thỏa mãn hội tụ đều:`,
           math: String.raw`|R(h) - \hat{R}_n(h)| \le \sqrt{\frac{\ln(2|\mathcal{H}| / \delta)}{2n}} \quad \Longleftrightarrow \quad n \ge \frac{1}{2\epsilon^2} \ln\frac{2|\mathcal{H}|}{\delta}`,
           intuition:
@@ -782,6 +884,20 @@ Kết quả kinh điển: Lớp siêu phẳng phân tách tuyến tính trên $\
 
 - **Cách CHUẨN (Không rò rỉ)**: chỉ tính $\mu, \sigma$ từ Train ` + '`[1, 2, 3]`' + String.raw`, nên ` + '`Z_train = [-1.22, 0.0, +1.22]`' + String.raw` bất biến mãi mãi.
 - **Cách SAI (Rò rỉ từ Val sang Train)**: gộp ` + '`[1, 2, 3, 98]`' + String.raw` tính chung $\mu = 26$, $\sigma = 41.6$ $\implies$ ` + '`Z_train`' + String.raw` biến thành ` + '`[-0.60, -0.58, -0.55]`' + String.raw`! Toàn bộ dữ liệu Train bị méo mó chỉ vì một số ở tập Test!`,
+          workedExampleCode: `import numpy as np
+
+X_tr = np.array([1.0, 2.0, 3.0])
+X_va = np.array([98.0])
+
+# ĐÚNG: Chỉ lấy mu, sd từ Train
+Z_tr_clean = (X_tr - X_tr.mean()) / X_tr.std()
+
+# SAI: Gộp cả Val rồi mới lấy mu, sd
+X_all = np.concatenate([X_tr, X_va])
+Z_tr_leaked = (X_tr - X_all.mean()) / X_all.std()
+
+print("Z_train SẠCH:", np.round(Z_tr_clean, 2))
+print("Z_train RÒ RỈ:", np.round(Z_tr_leaked, 2))`,
           codeBridge: {
             title: 'Luôn fit thống kê (mu, sd) DUY NHẤT trên X_train',
             pythonLoop: `# SAI: tính mean/std trên toàn bộ dữ liệu X trước khi chia!

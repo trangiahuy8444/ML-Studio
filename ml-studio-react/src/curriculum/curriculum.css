@@ -661,3 +661,54 @@
 .df-head-footnote .math-text p {
   margin: 0;
 }
+
+.worked-split-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+.worked-math-col {
+  min-width: 0;
+}
+.worked-code-panel {
+  min-width: 0;
+  background: #070e1a;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 10px;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+.worked-code-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #7dd3fc;
+}
+.worked-code-actions {
+  display: flex;
+  gap: 6px;
+}
+.worked-run-btn,
+.worked-reset-btn {
+  padding: 4px 10px !important;
+  font-size: 11.5px !important;
+}
+.worked-code-out pre {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-x: auto;
+}
+@media (max-width: 960px) {
+  .worked-split-grid {
+    grid-template-columns: 1fr;
+  }
+}

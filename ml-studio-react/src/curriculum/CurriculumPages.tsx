@@ -516,6 +516,8 @@ export function UnitPage({
   }
   const [kernelStatus, setKernelStatus] = useState('Sẵn sàng (Pyodide chạy trong trình duyệt)');
   const [runs, setRuns] = useState<Record<string, ExerciseRunState>>({});
+  const [workedCodes, setWorkedCodes] = useState<Record<string, string>>({});
+  const [workedRuns, setWorkedRuns] = useState<Record<string, { running: boolean; outputs: Output[] }>>({});
 
   const liveRef = useRef(true);
   const kernel = useMemo(() => new PythonKernel(setKernelStatus), []);
@@ -567,6 +569,36 @@ export function UnitPage({
       saveUnitCodes(unit.id, next);
       return next;
     });
+  }
+
+  async function runWorkedCode(cellKey: string, defaultCode: string) {
+    const code = workedCodes[cellKey] ?? defaultCode;
+    onBusy(true);
+    setWorkedRuns((old) => ({ ...old, [cellKey]: { running: true, outputs: [] } }));
+    try {
+      await kernel.start();
+      const res = await kernel.run(code);
+      if (!liveRef.current) return;
+      setWorkedRuns((old) => ({ ...old, [cellKey]: { running: false, outputs: res.outputs } }));
+    } catch (err) {
+      if (liveRef.current) {
+        setWorkedRuns((old) => ({
+          ...old,
+          [cellKey]: {
+            running: false,
+            outputs: [
+              {
+                output_type: 'error',
+                ename: 'KernelError',
+                evalue: err instanceof Error ? err.message : String(err),
+              },
+            ],
+          },
+        }));
+      }
+    } finally {
+      if (liveRef.current) onBusy(false);
+    }
   }
 
   async function runExercise(ex: GradExercise) {
@@ -744,8 +776,11 @@ export function UnitPage({
             <span className="eyebrow">Phần 1 · Lý thuyết 4 Tầng (Trực giác → Tính tay → Code → Toán Cao học)</span>
             <h2>Cơ sở hình thức &amp; Trực giác</h2>
             <UnitSymbolGlossary unit={unit} defaultOpen={mode === 'guided'} />
-            {unit.sections.map((sec) => {
+            {unit.sections.map((sec, secIdx) => {
               const hasLayers = Boolean(sec.realWorld || sec.workedExample || sec.codeBridge);
+              const workedKey = `${unit.id}::sec-${secIdx}`;
+              const workedCodeVal = sec.workedExampleCode ? (workedCodes[workedKey] ?? sec.workedExampleCode) : '';
+              const workedRunState = workedRuns[workedKey];
               return (
                 <article className="unit-section-card" key={sec.heading}>
                   <h3>{sec.heading}</h3>
@@ -760,7 +795,64 @@ export function UnitPage({
                   {sec.workedExample && (
                     <div className="layer-card layer-2">
                       <span className="layer-badge layer-badge-2">Tầng 2 · Tính tay từng bước bằng số nhỏ</span>
-                      <MathText text={sec.workedExample} />
+                      {sec.workedExampleCode ? (
+                        <div className="worked-split-grid">
+                          <div className="worked-math-col">
+                            <MathText text={sec.workedExample} />
+                          </div>
+                          <div className="worked-code-panel">
+                            <div className="worked-code-head">
+                              <span>Cell Python chạy thử số liệu này</span>
+                              <div className="worked-code-actions">
+                                <button
+                                  type="button"
+                                  className="btn-primary worked-run-btn"
+                                  disabled={workedRunState?.running}
+                                  onClick={() => void runWorkedCode(workedKey, sec.workedExampleCode!)}
+                                >
+                                  <Play size={12} /> {workedRunState?.running ? 'Đang chạy...' : 'Chạy ví dụ'}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-outline worked-reset-btn"
+                                  disabled={workedRunState?.running}
+                                  onClick={() =>
+                                    setWorkedCodes((old) => ({ ...old, [workedKey]: sec.workedExampleCode! }))
+                                  }
+                                >
+                                  <RotateCcw size={12} /> Đặt lại
+                                </button>
+                              </div>
+                            </div>
+                            <PythonEditor
+                              ariaLabel={`Ví dụ Python ${sec.heading}`}
+                              value={workedCodeVal}
+                              disabled={workedRunState?.running}
+                              rows={Math.min(14, Math.max(5, workedCodeVal.split('\n').length + 1))}
+                              onChange={(val) => setWorkedCodes((old) => ({ ...old, [workedKey]: val }))}
+                              onRun={() => void runWorkedCode(workedKey, sec.workedExampleCode!)}
+                            />
+                            {workedRunState && workedRunState.outputs.length > 0 && (
+                              <div className="worked-code-out">
+                                {workedRunState.outputs.map((o, oi) => (
+                                  <pre
+                                    key={oi}
+                                    className={o.output_type === 'error' ? 'python-error' : 'python-output'}
+                                  >
+                                    {o.output_type === 'error'
+                                      ? (o.traceback || [`${o.ename}: ${o.evalue}`]).join('\n')
+                                      : Array.isArray(o.text)
+                                        ? o.text.join('')
+                                        : o.text || o.data?.['text/plain'] || ''}
+                                  </pre>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <MathText text={sec.workedExample} />
+                      )}
                     </div>
                   )}
 

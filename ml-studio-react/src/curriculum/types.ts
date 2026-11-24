@@ -27,6 +27,8 @@ export interface GradSection {
   realWorld?: string;
   /** Tầng 2: Ví dụ tính tay từng bước bằng số nhỏ cụ thể */
   workedExample?: string;
+  /** Code Python minh họa chạy ngay kế bên Tầng 2 */
+  workedExampleCode?: string;
   /** Tầng 3: Cầu nối từ vòng lặp Python quen thuộc sang NumPy */
   codeBridge?: GradCodeBridge;
   /** Tầng 4: Giải nghĩa riêng từng ký hiệu xuất hiện trong mục này */
